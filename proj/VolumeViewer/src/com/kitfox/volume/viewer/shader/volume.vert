@@ -17,12 +17,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-varying vec3 position;
+//varying vec3 posView;
+varying vec3 posLocal;
 varying vec3 uv;
 
 void main()
 { 
     gl_Position = ftransform();
-    position = vec3(gl_ModelViewMatrix * gl_Vertex);
+    posLocal = gl_Vertex.xyz;
+//    posView = vec3(gl_ModelViewMatrix * gl_Vertex);
     uv = vec3(gl_MultiTexCoord0);
 }

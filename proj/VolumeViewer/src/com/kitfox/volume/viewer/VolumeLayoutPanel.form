@@ -39,7 +39,11 @@
                           </Group>
                       </Group>
                   </Group>
-                  <Component id="check_followViewer" alignment="0" min="-2" max="-2" attributes="0"/>
+                  <Group type="102" alignment="0" attributes="0">
+                      <Component id="check_showBounds" min="-2" max="-2" attributes="0"/>
+                      <EmptySpace max="-2" attributes="0"/>
+                      <Component id="check_showLightbuffer" min="-2" max="-2" attributes="0"/>
+                  </Group>
                   <Group type="102" alignment="0" attributes="0">
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Component id="jLabel1" min="-2" max="-2" attributes="0"/>
@@ -75,7 +79,10 @@
                   <Component id="slider_depth" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace max="-2" attributes="0"/>
-              <Component id="check_followViewer" min="-2" max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="check_showBounds" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="check_showLightbuffer" alignment="3" min="-2" max="-2" attributes="0"/>
+              </Group>
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
                   <Component id="jLabel1" min="-2" max="-2" attributes="0"/>
@@ -99,7 +106,7 @@
     </Component>
     <Component class="javax.swing.JSlider" name="slider_slices">
       <Properties>
-        <Property name="maximum" type="int" value="500"/>
+        <Property name="maximum" type="int" value="700"/>
         <Property name="minimum" type="int" value="1"/>
         <Property name="value" type="int" value="5"/>
       </Properties>
@@ -149,19 +156,20 @@
         <EventHandler event="stateChanged" listener="javax.swing.event.ChangeListener" parameters="javax.swing.event.ChangeEvent" handler="slider_depthStateChanged"/>
       </Events>
     </Component>
-    <Component class="javax.swing.JCheckBox" name="check_followViewer">
+    <Component class="javax.swing.JCheckBox" name="check_showBounds">
       <Properties>
         <Property name="selected" type="boolean" value="true"/>
-        <Property name="text" type="java.lang.String" value="Follow Viewer"/>
+        <Property name="text" type="java.lang.String" value="Show Bounds"/>
+        <Property name="toolTipText" type="java.lang.String" value="Draw box around all volume data"/>
       </Properties>
       <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="check_followViewerActionPerformed"/>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="check_showBoundsActionPerformed"/>
       </Events>
     </Component>
     <Component class="javax.swing.JSlider" name="slider_opacity">
       <Properties>
         <Property name="majorTickSpacing" type="int" value="1"/>
-        <Property name="maximum" type="int" value="500"/>
+        <Property name="maximum" type="int" value="700"/>
         <Property name="value" type="int" value="5"/>
       </Properties>
       <Events>
@@ -172,6 +180,16 @@
       <Properties>
         <Property name="text" type="java.lang.String" value="Opacity"/>
       </Properties>
+    </Component>
+    <Component class="javax.swing.JCheckBox" name="check_showLightbuffer">
+      <Properties>
+        <Property name="selected" type="boolean" value="true"/>
+        <Property name="text" type="java.lang.String" value="Show Lightbuffer"/>
+        <Property name="toolTipText" type="java.lang.String" value="Display lighting calculations onscreen"/>
+      </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="check_showLightbufferActionPerformed"/>
+      </Events>
     </Component>
   </SubComponents>
 </Form>

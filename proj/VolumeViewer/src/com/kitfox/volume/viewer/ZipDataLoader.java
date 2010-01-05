@@ -103,6 +103,7 @@ public class ZipDataLoader
             entry != null;
             entry = zin.getNextEntry())
         {
+//System.err.println("Parse entry " + entry.getName());
             if (!endsWith(entry.getName(), suffixes))
             {
                 continue;
@@ -120,7 +121,7 @@ public class ZipDataLoader
             imageList.addFirst(ImageIO.read(bin));
         }
 
-
+//System.err.println("Num entries " + imageList.size());
         return imageList.isEmpty()
                 ? null
                 : new DataSamplerImage(imageList.toArray(new BufferedImage[imageList.size()]));

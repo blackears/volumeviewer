@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+<jnlp codebase="file:C:\dev\dev.java.net\volumeviewer\www" href="launch.jnlp" spec="1.0+">
+-->
+<jnlp codebase="https://volumeviewer.kenai.com" href="launch.jnlp" spec="1.0+">
+    <information>
+        <title>Volume Viewer</title>
+        <vendor>kitfox</vendor>
+        <homepage href="http://volumeviewer.kenai.com"/>
+        <description>View and manipulate 3D volumetric data</description>
+        <description kind="short">View and manipulate 3D volumetric data</description>
+
+        <offline-allowed/>
+    </information>
+
+    <security>
+        <all-permissions/>
+    </security>
+    
+    <resources>
+        <j2se version="1.6+" initial-heap-size="500M" max-heap-size="1000M"/>
+        <extension href="http://download.java.net/media/jogl/builds/archive/jsr-231-webstart-current/jogl.jnlp" name="jogl"/>
+        <extension href="http://download.java.net/media/java3d/webstart/release/java3d-latest.jnlp"/>
+        <extension href="http://download.java.net/media/jai-imageio/webstart/release/jai-imageio-1.1.jnlp"/>
+
+        <!--property name="sun.java2d.opengl" value="true"/-->
+        <jar href="VolumeViewerTesting.jar" main="true"/>
+
+        <jar href="VolumeViewer.jar"/>
+    </resources>
+
+    <application-desc 
+    	main-class="com.kitfox.volume.test.TestFrame">
+    </application-desc>
+</jnlp>

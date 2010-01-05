@@ -19,6 +19,7 @@
 
 package com.kitfox.volume.viewer.shader;
 
+import com.kitfox.volume.MatrixUtil;
 import com.sun.opengl.util.BufferUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,12 +27,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.media.opengl.GL;
 import javax.media.opengl.GLAutoDrawable;
 import javax.vecmath.Color3f;
+import javax.vecmath.Matrix4f;
 import javax.vecmath.Vector3f;
 
 /**
@@ -40,13 +43,13 @@ import javax.vecmath.Vector3f;
  */
 public class VolumeShader
 {
-    public static enum LightingStyle
+    public static enum PassType
     {
-        NONE(0), PHONG(1), DIFFUSE(2);
+        COLOR(0), PHONG(1), LIGHTMAP(2), ALPHA(3);
 
         private final int id;
-        
-        LightingStyle(int id)
+
+        PassType(int id)
         {
             this.id = id;
         }
@@ -59,22 +62,30 @@ public class VolumeShader
         }
     }
 
-    private LightingStyle lightingStyle = LightingStyle.NONE;
+    private PassType passType = PassType.COLOR;
 
     int programId;
+    int uidLightMvp;
     int uidLightDir;
     int uidLightHalfDir;
     int uidLightColor;
     int uidLightStyle;
+    int uidTexOctantMask;
+    int uidOctantCenter;
     int uidTexVolume;
     int uidTexXfer;
+    int uidTexLightMap;
     int uidOpacityCorrect;
 
+    private int texOctantMask;
+    private Vector3f octantCenter = new Vector3f(.5f, .5f, .5f);
     private int texVolumeId;
     private int texXferId;
+    private int texLightMapId;
     private Vector3f viewDir = new Vector3f(0, 0, -1);
     private Vector3f lightDir = new Vector3f();
     private Color3f lightColor = new Color3f();
+    private Matrix4f lightMvp = new Matrix4f();
     private float opacityCorrect = 1;
 
     private String loadTextFile(URL url) throws IOException
@@ -175,12 +186,16 @@ public class VolumeShader
             isLinkValid(gl, programId);
 
             //Get uniform values
+            uidLightMvp = gl.glGetUniformLocation(programId, "lightMvp");
             uidLightDir = gl.glGetUniformLocation(programId, "lightDir");
             uidLightHalfDir = gl.glGetUniformLocation(programId, "lightHalfDir");
             uidLightColor = gl.glGetUniformLocation(programId, "lightColor");
             uidLightStyle = gl.glGetUniformLocation(programId, "lightStyle");
+            uidTexOctantMask = gl.glGetUniformLocation(programId, "texOctantMask");
+            uidOctantCenter = gl.glGetUniformLocation(programId, "octantCenter");
             uidTexVolume = gl.glGetUniformLocation(programId, "texVolume");
             uidTexXfer = gl.glGetUniformLocation(programId, "texXfer");
+            uidTexLightMap = gl.glGetUniformLocation(programId, "texLightMap");
             uidOpacityCorrect = gl.glGetUniformLocation(programId, "opacityCorrect");
         } catch (IOException ex) {
             Logger.getLogger(VolumeShader.class.getName()).log(Level.SEVERE, null, ex);
@@ -194,6 +209,7 @@ public class VolumeShader
         programId = 0;
     }
 
+    FloatBuffer mtxBuf = BufferUtil.newFloatBuffer(16);
     public void bind(GLAutoDrawable drawable, boolean frontToBack)
     {
         if (programId == 0)
@@ -207,21 +223,11 @@ public class VolumeShader
         gl.glDepthMask(false);
         if (frontToBack)
         {
-//            gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
-//            gl.glBlendFunc(GL.GL_ONE, GL.GL_ONE_MINUS_SRC_ALPHA);
             gl.glBlendFunc(GL.GL_ONE_MINUS_DST_ALPHA, GL.GL_ONE);
-
-            //TODO: The above line should really be this, but Windows
-            // graphics card hardware doesn't allow alpha
-            // reads from the destination buffer during compositing
-            // (at least so says the newsgroup posts I've read)
-//            gl.glBlendFunc(GL.GL_ONE_MINUS_DST_ALPHA, GL.GL_DST_ALPHA);
         }
         else
         {
-//            gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
             gl.glBlendFunc(GL.GL_ONE, GL.GL_ONE_MINUS_SRC_ALPHA);
-//            gl.glBlendFunc(GL.GL_ONE_MINUS_DST_ALPHA, GL.GL_ONE);
         }
 
 
@@ -231,10 +237,18 @@ public class VolumeShader
         lightHalf.add(viewDir);
         lightHalf.normalize();
 
+        gl.glUniform1i(uidTexOctantMask, texOctantMask);
+        gl.glUniform3f(uidOctantCenter, octantCenter.x, octantCenter.y, octantCenter.z);
+
         gl.glUniform1i(uidTexVolume, texVolumeId);
         gl.glUniform1i(uidTexXfer, texXferId);
+        gl.glUniform1i(uidTexLightMap, texLightMapId);
         gl.glUniform1f(uidOpacityCorrect, getOpacityCorrect());
-        gl.glUniform1i(uidLightStyle, lightingStyle.getId());
+
+        MatrixUtil.setMatrixc(lightMvp, mtxBuf);
+        mtxBuf.rewind();
+        gl.glUniformMatrix4fv(uidLightMvp, 1, false, mtxBuf);
+        gl.glUniform1i(uidLightStyle, passType.getId());
         gl.glUniform3f(uidLightDir, lightDir.x, lightDir.y, lightDir.z);
         gl.glUniform3f(uidLightHalfDir, lightHalf.x, lightHalf.y, lightHalf.z);
         gl.glUniform3f(uidLightColor, lightColor.x, lightColor.y, lightColor.z);
@@ -329,17 +343,17 @@ public class VolumeShader
     /**
      * @return the lightingStyle
      */
-    public LightingStyle getLightingStyle()
+    public PassType getPassType()
     {
-        return lightingStyle;
+        return passType;
     }
 
     /**
-     * @param lightingStyle the lightingStyle to set
+     * @param passType the lightingStyle to set
      */
-    public void setLightingStyle(LightingStyle lightingStyle)
+    public void setPassType(PassType passType)
     {
-        this.lightingStyle = lightingStyle;
+        this.passType = passType;
     }
 
     /**
@@ -354,5 +368,61 @@ public class VolumeShader
      */
     public void setOpacityCorrect(float opacityCorrect) {
         this.opacityCorrect = opacityCorrect;
+    }
+
+    /**
+     * @return the texLightMapId
+     */
+    public int getTexLightMapId() {
+        return texLightMapId;
+    }
+
+    /**
+     * @param texLightMapId the texLightMapId to set
+     */
+    public void setTexLightMapId(int texLightMapId) {
+        this.texLightMapId = texLightMapId;
+    }
+
+    /**
+     * @return the lightMvp
+     */
+    public Matrix4f getLightMvp() {
+        return new Matrix4f(lightMvp);
+    }
+
+    /**
+     * @param lightMvp the lightMvp to set
+     */
+    public void setLightMvp(Matrix4f lightMvp) {
+        this.lightMvp.set(lightMvp);
+    }
+
+    /**
+     * @return the texOctantMask
+     */
+    public int getTexOctantMask() {
+        return texOctantMask;
+    }
+
+    /**
+     * @param texOctantMask the texOctantMask to set
+     */
+    public void setTexOctantMask(int texOctantMask) {
+        this.texOctantMask = texOctantMask;
+    }
+
+    /**
+     * @return the octantCenter
+     */
+    public Vector3f getOctantCenter() {
+        return octantCenter;
+    }
+
+    /**
+     * @param octantCenter the octantCenter to set
+     */
+    public void setOctantCenter(Vector3f octantCenter) {
+        this.octantCenter = octantCenter;
     }
 }

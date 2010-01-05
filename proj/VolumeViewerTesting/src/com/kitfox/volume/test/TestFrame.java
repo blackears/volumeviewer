@@ -25,17 +25,39 @@ package com.kitfox.volume.test;
 import com.kitfox.volume.light.LightCtrlPanel;
 import com.kitfox.volume.transfer.TransferFnPanel;
 import com.kitfox.volume.viewer.DataSamplerImage;
+import com.kitfox.volume.mask.SectorPanel;
 import com.kitfox.volume.viewer.ViewerCube;
 import com.kitfox.volume.viewer.ViewerPanel;
 import com.kitfox.volume.viewer.VolumeData;
 import com.kitfox.volume.viewer.VolumeLayoutPanel;
 import com.kitfox.volume.viewer.ZipDataLoader;
+import com.kitfox.xml.schema.volumeviewer.cubestate.CubeType;
+import com.kitfox.xml.schema.volumeviewer.cubestate.NavigatorType;
+import com.kitfox.xml.schema.volumeviewer.savefile.ObjectFactory;
+import com.kitfox.xml.schema.volumeviewer.savefile.VolumeViewerConfigType;
+import com.kitfox.xml.schema.volumeviewer.savefile.WindowLayoutType;
 import java.awt.BorderLayout;
+import java.awt.Desktop;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JPopupMenu;
+import javax.swing.filechooser.FileFilter;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.transform.stream.StreamSource;
 
 /**
  *
@@ -45,49 +67,97 @@ public class TestFrame extends javax.swing.JFrame
 {
     private static final long serialVersionUID = 0;
 
+    JFileChooser fileChooser = new JFileChooser();
+    {
+        FileFilter filter = new FileFilter()
+        {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || f.getName().endsWith(".vvc");
+            }
+
+            @Override
+            public String getDescription() {
+                return "Volume Viewer config file (*.vvc)";
+            }
+        };
+        fileChooser.setFileFilter(filter);
+        fileChooser.setCurrentDirectory(new File("."));
+    }
+
+    class DataLoader implements PropertyChangeListener
+    {
+        public void propertyChange(PropertyChangeEvent evt)
+        {
+            try {
+                DataSamplerImage tex = ZipDataLoader.createSampler(dataSource.getDataSource());
+                System.err.println("Loaded images");
+                VolumeData data =
+                        new VolumeData(tex.getxSpan(), tex.getySpan(), tex.getzSpan(), tex);
+                System.err.println("Sampled data");
+                cube.setData(data);
+
+                xferPanel.setVolumeData(data);
+            } catch (IOException ex) {
+                Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        }
+    }
+    DataLoader loader = new DataLoader();
+    DataSource dataSource = new DataSource();
+
+    JDialog dlgDataSourcePanel = new JDialog();
     JDialog dlgXferPanel = new JDialog();
     JDialog dlgLightPanel = new JDialog();
     JDialog dlgLayoutPanel = new JDialog();
+    JDialog dlgSectorPanel = new JDialog();
+    JDialog dlgAboutPanel = new JDialog();
 
     TransferFnPanel xferPanel = new TransferFnPanel();
+    final URI helpContents;
 
+    DataPanel dataPanel = new DataPanel();
     ViewerPanel viewer = new ViewerPanel();
     LightCtrlPanel lightPanel = new LightCtrlPanel();
     VolumeLayoutPanel layoutPanel = new VolumeLayoutPanel();
+    SectorPanel octantPanel = new SectorPanel();
+    AboutPanel aboutPanel = new AboutPanel();
 
     ViewerCube cube = new ViewerCube();
+
+//    private static final String NS = "http://xml.kitfox.com/schema/volumeViewer/saveFile";
+
 
     /** Creates new form TestFrame */
     public TestFrame()
     {
         initComponents();
 
+        URI uri = null;
+        try {
+            uri = new URI("https://volumeviewer.dev.java.net/");
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(AboutPanel.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        helpContents = uri;
+
         getContentPane().add(viewer, BorderLayout.CENTER);
-//        panel_viewer.add(viewer, BorderLayout.CENTER);
-//        panel_light.add(lightPanel, BorderLayout.CENTER);
+
+        dataPanel.setDataSource(dataSource);
+        dataSource.addPropertyChangeListener(loader);
 
         viewer.setCube(cube);
         lightPanel.setCube(cube);
         layoutPanel.setCube(cube);
-        
-        try {
-//            VolumeTexture tex = ZipDataLoader.createSampler(TestFrame.class.getResource("/mrbrain-8bit.zip"));
-//            cube.setTexture(tex);
-            DataSamplerImage tex = ZipDataLoader.createSampler(TestFrame.class.getResource("/mrbrain-8bit.zip"));
-            System.err.println("Loaded images");
-            VolumeData data =
-                    new VolumeData(tex.getxSpan(), tex.getySpan(), tex.getzSpan(), tex);
-            System.err.println("Sampled data");
-            cube.setData(data);
-
-            xferPanel.setVolumeData(data);
-        } catch (IOException ex) {
-            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        octantPanel.setCube(cube);
 
         buildWindows();
 
         setSize(640, 480);
+        
+
+        dataSource.setDataSource(TestFrame.class.getResource("/mrbrain-8bit.zip"));
     }
 
     private void buildWindows()
@@ -95,7 +165,7 @@ public class TestFrame extends javax.swing.JFrame
         dlgXferPanel.add(xferPanel, BorderLayout.CENTER);
         dlgXferPanel.pack();
         dlgXferPanel.setLocation(640, 0);
-        dlgXferPanel.setTitle("Transfer Function / Histogram");
+        dlgXferPanel.setTitle("Paint");
         dlgXferPanel.setVisible(true);
 
         dlgLightPanel.add(lightPanel, BorderLayout.CENTER);
@@ -104,11 +174,29 @@ public class TestFrame extends javax.swing.JFrame
         dlgLightPanel.setTitle("Light");
         dlgLightPanel.setVisible(true);
 
+        dlgSectorPanel.add(octantPanel, BorderLayout.CENTER);
+        dlgSectorPanel.pack();
+        dlgSectorPanel.setLocation(840, 480);
+        dlgSectorPanel.setTitle("Clip Sectors");
+        dlgSectorPanel.setVisible(true);
+
         dlgLayoutPanel.add(layoutPanel, BorderLayout.CENTER);
         dlgLayoutPanel.pack();
         dlgLayoutPanel.setLocation(0, 480);
         dlgLayoutPanel.setTitle("Layout");
         dlgLayoutPanel.setVisible(true);
+
+        dlgDataSourcePanel.add(dataPanel, BorderLayout.CENTER);
+        dlgDataSourcePanel.pack();
+        dlgDataSourcePanel.setLocation(20, 480);
+        dlgDataSourcePanel.setTitle("Data Source");
+        dlgDataSourcePanel.setVisible(false);
+
+        dlgAboutPanel.add(aboutPanel, BorderLayout.CENTER);
+        dlgAboutPanel.pack();
+        dlgAboutPanel.setLocation(20, 480);
+        dlgAboutPanel.setTitle("About the Author");
+        dlgAboutPanel.setVisible(false);
 
 
     }
@@ -123,16 +211,58 @@ public class TestFrame extends javax.swing.JFrame
     private void initComponents() {
 
         jMenuBar1 = new javax.swing.JMenuBar();
+        menu_file = new javax.swing.JMenu();
+        cm_fileLoad = new javax.swing.JMenuItem();
+        cm_fileSave = new javax.swing.JMenuItem();
+        menu_demo = new javax.swing.JMenu();
         menu_window = new javax.swing.JMenu();
+        cm_winDataSource = new javax.swing.JMenuItem();
         cm_winXferFn = new javax.swing.JMenuItem();
         cm_winLighting = new javax.swing.JMenuItem();
         cm_winLayout = new javax.swing.JMenuItem();
+        cm_winOctant = new javax.swing.JMenuItem();
+        menu_help = new javax.swing.JMenu();
+        cm_helpContents = new javax.swing.JMenuItem();
+        cm_helpAbout = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
+        menu_file.setText("File");
+
+        cm_fileLoad.setText("Load...");
+        cm_fileLoad.setToolTipText("Load a config file");
+        cm_fileLoad.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cm_fileLoadActionPerformed(evt);
+            }
+        });
+        menu_file.add(cm_fileLoad);
+
+        cm_fileSave.setText("Save...");
+        cm_fileSave.setToolTipText("Save configuration");
+        cm_fileSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cm_fileSaveActionPerformed(evt);
+            }
+        });
+        menu_file.add(cm_fileSave);
+
+        jMenuBar1.add(menu_file);
+
+        menu_demo.setText("Demo");
+        jMenuBar1.add(menu_demo);
+
         menu_window.setText("Window");
 
-        cm_winXferFn.setText("Transfer Function");
+        cm_winDataSource.setText("Data Source");
+        cm_winDataSource.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cm_winDataSourceActionPerformed(evt);
+            }
+        });
+        menu_window.add(cm_winDataSource);
+
+        cm_winXferFn.setText("Paint");
         cm_winXferFn.setToolTipText("Paint colors onto the rendered volume");
         cm_winXferFn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -159,7 +289,35 @@ public class TestFrame extends javax.swing.JFrame
         });
         menu_window.add(cm_winLayout);
 
+        cm_winOctant.setText("Clip Sectors");
+        cm_winOctant.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cm_winOctantActionPerformed(evt);
+            }
+        });
+        menu_window.add(cm_winOctant);
+
         jMenuBar1.add(menu_window);
+
+        menu_help.setText("Help");
+
+        cm_helpContents.setText("Contents");
+        cm_helpContents.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cm_helpContentsActionPerformed(evt);
+            }
+        });
+        menu_help.add(cm_helpContents);
+
+        cm_helpAbout.setText("About");
+        cm_helpAbout.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cm_helpAboutActionPerformed(evt);
+            }
+        });
+        menu_help.add(cm_helpAbout);
+
+        jMenuBar1.add(menu_help);
 
         setJMenuBar(jMenuBar1);
 
@@ -178,6 +336,173 @@ public class TestFrame extends javax.swing.JFrame
         dlgLayoutPanel.setVisible(true);
     }//GEN-LAST:event_cm_winLayoutActionPerformed
 
+    private void cm_winOctantActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cm_winOctantActionPerformed
+        dlgSectorPanel.setVisible(true);
+    }//GEN-LAST:event_cm_winOctantActionPerformed
+
+    private void cm_winDataSourceActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cm_winDataSourceActionPerformed
+        dlgDataSourcePanel.setVisible(true);
+    }//GEN-LAST:event_cm_winDataSourceActionPerformed
+
+    private void cm_helpContentsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cm_helpContentsActionPerformed
+        try {
+            Desktop.getDesktop().browse(helpContents);
+        } catch (IOException ex) {
+            Logger.getLogger(AboutPanel.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_cm_helpContentsActionPerformed
+
+    private void cm_helpAboutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cm_helpAboutActionPerformed
+        dlgAboutPanel.setVisible(true);
+    }//GEN-LAST:event_cm_helpAboutActionPerformed
+
+    private void cm_fileLoadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cm_fileLoadActionPerformed
+        int res = fileChooser.showOpenDialog(this);
+
+        if (res != JFileChooser.APPROVE_OPTION)
+        {
+            return;
+        }
+
+        File file = fileChooser.getSelectedFile();
+        if (!file.exists())
+        {
+            return;
+        }
+
+        //Import
+        try {
+            FileReader reader = new FileReader(file);
+            JAXBContext context = JAXBContext.newInstance(
+                    CubeType.class, NavigatorType.class, VolumeViewerConfigType.class);
+            StreamSource source = new StreamSource(reader);
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+
+            JAXBElement<VolumeViewerConfigType> ele =
+                    unmarshaller.unmarshal(source, VolumeViewerConfigType.class);
+
+            load(ele.getValue());
+
+            System.err.println("Loaded config file " + file.getAbsolutePath());
+        } catch (JAXBException ex) {
+            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }//GEN-LAST:event_cm_fileLoadActionPerformed
+
+    private void cm_fileSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cm_fileSaveActionPerformed
+        int res = fileChooser.showSaveDialog(this);
+
+        if (res != JFileChooser.APPROVE_OPTION)
+        {
+            return;
+        }
+
+        File file = fileChooser.getSelectedFile();
+        if (!file.getName().endsWith(".vvc"))
+        {
+            file = new File(file.getParentFile(), file.getName() + ".vvc");
+        }
+
+        //Export
+        ObjectFactory fact = new ObjectFactory();
+        JAXBElement<VolumeViewerConfigType> value = fact.createVolumeViewerConfig(save());
+
+        try {
+            JAXBContext context = JAXBContext.newInstance(
+                    CubeType.class, NavigatorType.class, VolumeViewerConfigType.class);
+            Marshaller marshaller = context.createMarshaller();
+            marshaller.setProperty(Marshaller.JAXB_ENCODING, "UTF-8");
+            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+
+            FileWriter writer = new FileWriter(file);
+            marshaller.marshal(value, writer);
+            writer.close();
+
+            System.err.println("Saved config file " + file.getAbsolutePath());
+        } catch (JAXBException ex) {
+            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }//GEN-LAST:event_cm_fileSaveActionPerformed
+
+    private void load(VolumeViewerConfigType conf)
+    {
+        for (WindowLayoutType win: conf.getWindowList())
+        {
+            if ("dlgDataSourcePanel".equals(win.getName()))
+            {
+                loadWindow(win, dlgDataSourcePanel);
+            }
+            else if ("dlgXferPanel".equals(win.getName()))
+            {
+                loadWindow(win, dlgXferPanel);
+            }
+            else if ("dlgLightPanel".equals(win.getName()))
+            {
+                loadWindow(win, dlgLightPanel);
+            }
+            else if ("dlgLayoutPanel".equals(win.getName()))
+            {
+                loadWindow(win, dlgLayoutPanel);
+            }
+            else if ("dlgSectorPanel".equals(win.getName()))
+            {
+                loadWindow(win, dlgSectorPanel);
+            }
+            else if ("dlgAboutPanel".equals(win.getName()))
+            {
+                loadWindow(win, dlgAboutPanel);
+            }
+        }
+        dataSource.load(conf.getDataSource());
+        viewer.load((NavigatorType)conf.getNavigator());
+
+        cube.load((CubeType)conf.getCube());
+    }
+
+    private void loadWindow(WindowLayoutType win, JDialog dlg)
+    {
+        dlg.setBounds(win.getX(), win.getY(), win.getWidth(), win.getHeight());
+        dlg.setVisible(win.isVisible());
+    }
+
+    private VolumeViewerConfigType save()
+    {
+        VolumeViewerConfigType target = new VolumeViewerConfigType();
+
+        target.setCube(cube.save());
+        saveWindow(target, dlgDataSourcePanel, "dlgDataSourcePanel");
+        saveWindow(target, dlgXferPanel, "dlgXferPanel");
+        saveWindow(target, dlgLightPanel, "dlgLightPanel");
+        saveWindow(target, dlgLayoutPanel, "dlgLayoutPanel");
+        saveWindow(target, dlgSectorPanel, "dlgSectorPanel");
+        saveWindow(target, dlgAboutPanel, "dlgAboutPanel");
+        target.setDataSource(dataSource.save());
+
+        target.setNavigator(viewer.save());
+
+        return target;
+    }
+
+    private void saveWindow(VolumeViewerConfigType target, JDialog dlg, String id)
+    {
+        WindowLayoutType win = new WindowLayoutType();
+        
+        win.setHeight(dlg.getHeight());
+        win.setName(id);
+        win.setVisible(dlg.isVisible());
+        win.setWidth(dlg.getWidth());
+        win.setX(dlg.getX());
+        win.setY(dlg.getY());
+
+        target.getWindowList().add(win);
+    }
+
     /**
     * @param args the command line arguments
     */
@@ -193,10 +518,19 @@ public class TestFrame extends javax.swing.JFrame
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JMenuItem cm_fileLoad;
+    private javax.swing.JMenuItem cm_fileSave;
+    private javax.swing.JMenuItem cm_helpAbout;
+    private javax.swing.JMenuItem cm_helpContents;
+    private javax.swing.JMenuItem cm_winDataSource;
     private javax.swing.JMenuItem cm_winLayout;
     private javax.swing.JMenuItem cm_winLighting;
+    private javax.swing.JMenuItem cm_winOctant;
     private javax.swing.JMenuItem cm_winXferFn;
     private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JMenu menu_demo;
+    private javax.swing.JMenu menu_file;
+    private javax.swing.JMenu menu_help;
     private javax.swing.JMenu menu_window;
     // End of variables declaration//GEN-END:variables
 

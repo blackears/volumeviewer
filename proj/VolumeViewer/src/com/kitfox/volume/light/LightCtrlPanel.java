@@ -24,7 +24,7 @@ package com.kitfox.volume.light;
 
 import com.kitfox.volume.ColorChipPanel;
 import com.kitfox.volume.viewer.ViewerCube;
-import com.kitfox.volume.viewer.shader.VolumeShader.LightingStyle;
+import com.kitfox.volume.viewer.ViewerCube.LightingStyle;
 import java.awt.BorderLayout;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -80,6 +80,19 @@ public class LightCtrlPanel extends javax.swing.JPanel
         negZPanel.setLightColor(cube.getLightColor());
         posZPanel.setLightColor(cube.getLightColor());
         colorPanel.setChipColor(cube.getLightColor());
+
+        switch (cube.getLightingStyle())
+        {
+            case NONE:
+                radio_styleNone.setSelected(true);
+                break;
+            case PHONG:
+                radio_stylePhong.setSelected(true);
+                break;
+            case DIFFUSE:
+                radio_styleDiffuse.setSelected(true);
+                break;
+        }
     }
 
     public void propertyChange(PropertyChangeEvent evt)

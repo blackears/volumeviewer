@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://xml.kitfox.com/schema/volumeViewer/saveFile"
+    xmlns:tns="http://xml.kitfox.com/schema/volumeViewer/saveFile"
+    elementFormDefault="qualified">
+    <xsd:complexType name="dataSourceType">
+        <xsd:sequence/>
+        <xsd:attribute name="url" type="xsd:anyURI"/>
+    </xsd:complexType>
+    <xsd:complexType name="windowLayoutType">
+        <xsd:sequence/>
+        <xsd:attribute name="x" type="xsd:int"/>
+        <xsd:attribute name="y" type="xsd:int"/>
+        <xsd:attribute name="width" type="xsd:int"/>
+        <xsd:attribute name="height" type="xsd:int"/>
+        <xsd:attribute name="name" type="xsd:string"/>
+        <xsd:attribute name="visible" type="xsd:boolean"/>
+    </xsd:complexType>
+    <xsd:complexType name="volumeViewerConfigType">
+        <xsd:sequence>
+            <xsd:element name="cube" type="xsd:anyType"></xsd:element>
+            <xsd:element name="windowList" type="tns:windowLayoutType" minOccurs="0" maxOccurs="unbounded"></xsd:element>
+            <xsd:element name="dataSource" type="tns:dataSourceType"></xsd:element>
+            <xsd:element name="navigator" type="xsd:anyType"></xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:element name="volumeViewerConfig" type="tns:volumeViewerConfigType"></xsd:element>
+</xsd:schema>
+

@@ -71,4 +71,76 @@
     nbproject/build-impl.xml file. 
 
     -->
+
+    <property name="www.dir" location="../../www"/>
+    <property name="key.user" value="kitfox"/>
+    <property name="key.password" value="anonymous"/>
+    <property name="key.location" location="tempKeystore"/>
+
+    <target name="genKey" depends="init">
+        <delete file="${key.location}"/>
+        <genkey alias="${key.user}" storepass="${key.password}" keystore="${key.location}" validity="100000" verbose="true">
+            <dname>
+                <param name="CN" value="Mark McKay, mark@kitfox.com"/>
+                <param name="OU" value="kitfox.com"/>
+                <param name="O"  value="kitfox"/>
+                <param name="L"  value="Toronto"/>
+                <param name="S"  value="Ontario"/>
+                <param name="C"  value="CA"/>
+            </dname>
+        </genkey>
+    </target>
+
+    <target name="deploy" depends="init">
+        <jar destfile="${dist.jar}" update="true">
+            <manifest>
+                <attribute name="Main-Class" value="com.kitfox.volume.test.TestFrame"/>
+                <attribute name="Class-Path" value="VolumeViewer.jar jai_imageio.jar vecmath.jar jogl.jar gluegen-rt.jar"/>
+                <attribute name="Built-By" value="Mark McKay"/>
+                <attribute name="Implementation-Vendor" value="Mark McKay - kitfox.com"/>
+                <attribute name="Implementation-Title" value="VolumeViewer"/>
+                <attribute name="Implementation-Version" value="1.0.0-m1"/>
+            </manifest>
+        </jar>
+        <copy file="${dist.jar}" todir="${www.dir}"/>
+
+        <copy file="../VolumeViewer/dist/VolumeViewer.jar" todir="${www.dir}"/>
+
+
+        <signjar alias="${key.user}" storepass="${key.password}" keystore="${key.location}">
+            <path>
+                <fileset dir="${www.dir}" includes="**/*.jar"/>
+            </path>
+        </signjar>
+    </target>
+
+
+
+    <target name="-post-clean">
+        <delete includeEmptyDirs="true">
+            <fileset dir="gen" includes="**/*"/>
+        </delete>
+    </target>
+
+    <target name="-pre-compile">
+        <antcall target="bind-preferences"/>
+    </target>
+
+    <target name="bind-preferences" depends="init">
+        <taskdef name="xjc" classname="com.sun.tools.xjc.XJCTask">
+            <classpath>
+                <pathelement path="${javac.classpath}"/>
+            </classpath>
+        </taskdef>
+
+        <xjc destdir="gen" extension="true" removeOldOutput="true">
+            <schema dir="src">
+                <include name="**/*.xsd"/>
+            </schema>
+            <produces dir="gen">
+                <include name="**/*.java"/>
+            </produces>
+        </xjc>
+    </target>
+
 </project>

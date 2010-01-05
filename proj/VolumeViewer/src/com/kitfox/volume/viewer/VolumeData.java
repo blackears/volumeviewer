@@ -19,6 +19,9 @@
 
 package com.kitfox.volume.viewer;
 
+import static com.kitfox.volume.JAXBHelper.*;
+
+import com.kitfox.xml.schema.volumeviewer.cubestate.TransferType;
 import com.sun.opengl.util.BufferUtil;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -76,6 +79,21 @@ public class VolumeData
         g.fillRect(0, 0, hist.width, hist.height);
         g.dispose();
     }
+
+    public void load(TransferType target)
+    {
+        setTransferFunction(bytesToImage(target.getTransferFunction()));
+    }
+
+    public TransferType save()
+    {
+        TransferType target = new TransferType();
+
+        target.setTransferFunction(imageToBytes(transferFunction, "png"));
+
+        return target;
+    }
+
 
     public void addDataChangeListener(DataChangeListener l)
     {
@@ -172,9 +190,9 @@ public class VolumeData
         gl.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1);
 
         gl.glBindTexture(GL.GL_TEXTURE_3D, textureId3d);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_R, GL.GL_REPEAT);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_S, GL.GL_REPEAT);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_T, GL.GL_REPEAT);
+        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_R, GL.GL_CLAMP);
+        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP);
+        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP);
         gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
         gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR_MIPMAP_LINEAR);
         gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_GENERATE_MIPMAP, GL.GL_TRUE);

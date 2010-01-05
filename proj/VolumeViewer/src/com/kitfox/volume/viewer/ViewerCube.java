@@ -19,17 +19,25 @@
 
 package com.kitfox.volume.viewer;
 
+import static com.kitfox.volume.JAXBHelper.*;
+
+import com.kitfox.volume.MatrixUtil;
 import com.kitfox.volume.VolumeRenderable;
+import com.kitfox.volume.mask.SectorMask;
+import com.kitfox.volume.viewer.shader.LightBuffer;
 import com.kitfox.volume.viewer.shader.VolumeShader;
-import com.kitfox.volume.viewer.shader.VolumeShader.LightingStyle;
+import com.kitfox.volume.viewer.shader.VolumeShader.PassType;
+import com.kitfox.xml.schema.volumeviewer.cubestate.CubeType;
+import com.kitfox.xml.schema.volumeviewer.cubestate.LightingStyleType;
+import com.sun.opengl.util.BufferUtil;
+import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import javax.media.opengl.GL;
 import javax.media.opengl.GLAutoDrawable;
-import javax.media.opengl.glu.GLU;
 import javax.swing.event.ChangeEvent;
-import javax.vecmath.AxisAngle4f;
 import javax.vecmath.Color3f;
 import javax.vecmath.Matrix4f;
 import javax.vecmath.Point3f;
@@ -39,13 +47,31 @@ import javax.vecmath.Vector3f;
  *
  * @author kitfox
  */
-public class ViewerCube implements DataChangeListener
+public class ViewerCube
+        implements DataChangeListener, ViewPlaneStack.SliceTracker,
+        PropertyChangeListener
 {
+    public static enum LightingStyle
+    {
+        NONE(1), PHONG(1), DIFFUSE(2);
+
+        private final int numPasses;
+
+        LightingStyle(int numPasses)
+        {
+            this.numPasses = numPasses;
+        }
+
+        /**
+         * @return the numPasses
+         */
+        public int getNumPasses() {
+            return numPasses;
+        }
+    }
+
     private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
 
-    private float viewerRadius = 7;
-    private float viewerYaw = 270;
-    private float viewerPitch = 0;
     private VolumeRenderable renderable;
     private Vector3f volumeRadius;
     public static final String PROP_VOLUMERADIUS = "volumeRadius";
@@ -55,28 +81,46 @@ public class ViewerCube implements DataChangeListener
     protected float opacityReference = 5;
     public static final String PROP_OPACITYREFERENCE = "opacityReference";
 
-    protected Vector3f lightDir;
+    protected Vector3f lightDir;  //Light direction in view space
     public static final String PROP_LIGHTDIR = "lightDir";
     protected Color3f lightColor = new Color3f(1, 1, 1);
     public static final String PROP_LIGHTCOLOR = "lightColor";
     public static final String PROP_NUMPLANES = "numPlanes";
 
-    protected boolean followViewer = true;
-    public static final String PROP_FOLLOWVIEWER = "followViewer";
+    protected boolean drawWireframe = true;
+    public static final String PROP_DRAWWIREFRAME = "drawWireframe";
+    protected boolean drawLightbuffer = true;
+    public static final String PROP_DRAWLIGHTBUFFER = "drawLightbuffer";
+
     protected LightingStyle lightingStyle = LightingStyle.NONE;
     public static final String PROP_LIGHTINGSTYLE = "lightingStyle";
 
+    protected Matrix4f viewerMvMtx = new Matrix4f();
+    public static final String PROP_VIEWERMVMTX = "viewerMvMtx";
+    protected Matrix4f viewerProjMtx = new Matrix4f();
+    public static final String PROP_VIEWERPROJMTX = "viewerProjMtx";
 
     protected VolumeData data;
     public static final String PROP_DATA = "data";
 
+    //Cached data calculated from the above
+    Matrix4f viewerMvTMtx;
+    Matrix4f lightProjMtx;
+    Matrix4f lightMvMtx;
+    Matrix4f lightMvpMtx;
     boolean frontToBack;
-    private Point3f viewerPos;
-    private Vector3f viewerDir;
     Vector3f planeNormal;
+    Vector3f lightDirCube;  //Light dir is local cube space
+    Vector3f viewerDirCube;
+
+    //Utilities for rendering
     final WireCube wire = new WireCube();
     final ViewPlaneStack planes = new ViewPlaneStack();
     final VolumeShader shader = new VolumeShader();
+    final LightBuffer lightBuffer = new LightBuffer();
+    private final SectorMask sectorMask = new SectorMask();
+
+
 
     ArrayList<DataChangeListener> listeners = new ArrayList<DataChangeListener>();
 
@@ -84,29 +128,45 @@ public class ViewerCube implements DataChangeListener
 
     public ViewerCube()
     {
-        lightDir = new Vector3f(.5f, .5f, -1);
+        lightDir = new Vector3f(.5f, .5f, 1);
         lightDir.normalize();
         volumeRadius = new Vector3f(1, 1, 1);
 
+        sectorMask.addPropertyChangeListener(this);
     }
 
-    public void addDataChangeListener(DataChangeListener l)
+    public void load(CubeType target)
     {
-        listeners.add(l);
+        setDrawLightbuffer(target.isDrawLightbuffer());
+        setDrawWireframe(target.isDrawWireframe());
+        setLightColor(asColor3f(target.getLightColor()));
+        setLightDir(asVec3f(target.getLightDir()));
+        setLightingStyle(LightingStyle.valueOf(target.getLightingStyle().name()));
+        setNumPlanes(target.getNumPlanes());
+        setOpacityReference(target.getOpacityRef());
+        setVolumeRadius(asVec3f(target.getVolumeRadius()));
+
+        sectorMask.load(target.getSectorMask());
+        data.load(target.getTransfer());
     }
 
-    public void removeDataChangeListener(DataChangeListener l)
+    public CubeType save()
     {
-        listeners.remove(l);
-    }
+        CubeType target = new CubeType();
 
-    protected void fireRefresh()
-    {
-        ChangeEvent evt = new ChangeEvent(this);
-        for (int i = 0; i < listeners.size(); ++i)
-        {
-            listeners.get(i).dataChanged(evt);
-        }
+        target.setDrawLightbuffer(drawLightbuffer);
+        target.setDrawWireframe(drawWireframe);
+        target.setLightColor(asVectorType(lightColor));
+        target.setLightDir(asVectorType(lightDir));
+        target.setLightingStyle(LightingStyleType.valueOf(lightingStyle.name()));
+        target.setNumPlanes(getNumPlanes());
+        target.setOpacityRef(getOpacityReference());
+        target.setVolumeRadius(asVectorType(volumeRadius));
+
+        target.setSectorMask(sectorMask.save());
+        target.setTransfer(data.save());
+
+        return target;
     }
 
     /**
@@ -129,57 +189,118 @@ public class ViewerCube implements DataChangeListener
         propertyChangeSupport.removePropertyChangeListener(listener);
     }
 
+    public void propertyChange(PropertyChangeEvent evt)
+    {
+        //Pass along to listeners of this component
+//        propertyChangeSupport.firePropertyChange(evt);
+        propertyChangeSupport.firePropertyChange(evt.getPropertyName(), evt.getOldValue(), evt.getNewValue());
+    }
+
+    public void addDataChangeListener(DataChangeListener l)
+    {
+        listeners.add(l);
+    }
+
+    public void removeDataChangeListener(DataChangeListener l)
+    {
+        listeners.remove(l);
+    }
+
+    protected void fireRefresh()
+    {
+        ChangeEvent evt = new ChangeEvent(this);
+        for (int i = 0; i < listeners.size(); ++i)
+        {
+            listeners.get(i).dataChanged(evt);
+        }
+    }
+
     private void clearCache()
     {
-        viewerPos = null;
-        viewerDir = null;
         planeNormal = null;
+        viewerDirCube = null;
+        lightDirCube = null;
+        lightProjMtx = null;
+        lightMvMtx = null;
+        lightMvpMtx = null;
     }
 
     private void buildCache()
     {
-        //Yaw transform
-        viewerPos = new Point3f(
-                (float)Math.sin(Math.toRadians(viewerYaw)),
-                0,
-                (float)Math.cos(Math.toRadians(viewerYaw)));
-
-        //Add pitch
-        AxisAngle4f axis = new AxisAngle4f(
-                -viewerPos.z, 0, viewerPos.x, (float)Math.toRadians(viewerPitch));
-        Matrix4f rot = new Matrix4f();
-        rot.set(axis);
-        rot.transform(viewerPos);
-
-        //Set back by radius
-        viewerPos.scale(viewerRadius);
-        viewerDir = new Vector3f(viewerPos);
-        viewerDir.normalize();
+        //Map vectors from view space to model space
+        viewerMvTMtx = new Matrix4f(viewerMvMtx);
+        viewerMvTMtx.transpose();
 
         //Determine plane direction
         planeNormal = new Vector3f(lightDir);
 
-        if (followViewer)
+        //Calculations are in view space.  Viewer looks down (0, 0, -1)
+        float viewDotLight = lightDir.z;
+        if (viewDotLight > 0)
         {
-            Vector3f viewerDir = new Vector3f(getViewerPos());
-            viewerDir.normalize();
-
-            if (viewerDir.dot(lightDir) > 0)
-            {
-                //Light behind viewer
-                planeNormal.add(viewerDir);
-                planeNormal.normalize();
-                frontToBack = true;
-            }
-            else
-            {
-                //Light in front of viewer
-                planeNormal.sub(viewerDir);
-                planeNormal.normalize();
-                frontToBack = false;
-            }
-//planeNormal.set(viewerDir);
+            //Light behind viewer
+            planeNormal.z += 1;  //add viewer dir (0, 0, 1)
+            planeNormal.normalize();
+            frontToBack = true;
         }
+        else
+        {
+            //Light in front of viewer
+            planeNormal.z -= 1;  //sub viewer dir (0, 0, 1)
+            planeNormal.normalize();
+            frontToBack = false;
+        }
+
+        //Map plane normal to object space
+        viewerMvTMtx.transform(planeNormal);
+        lightDirCube = new Vector3f(lightDir);
+        viewerMvTMtx.transform(lightDirCube);
+        viewerDirCube = new Vector3f(0, 0, 1);
+        viewerMvTMtx.transform(viewerDirCube);
+
+        //Setup view cameras
+
+        //Setup light cameras
+//        float volSize = volumeRadius.length();
+        lightProjMtx = new Matrix4f();
+        lightMvMtx = new Matrix4f();
+        lightMvpMtx = new Matrix4f();
+//        MatrixUtil.lookAt(lightMvMtx,
+//                lightDirCube.x, lightDirCube.y, lightDirCube.z,
+//                0, 0, 0,
+//                0, 1, 0);
+        MatrixUtil.lookAt(lightMvMtx,
+                0, 0, 0,
+                -lightDirCube.x, -lightDirCube.y, -lightDirCube.z,
+                0, 1, 0);
+        {
+            float minX, maxX, minY, maxY, minZ, maxZ;
+            minX = maxX = minY = maxY = minZ = maxZ = 0;
+            //Project bounding box of cube into modelview space
+//            Vector3f pt = new Vector3f();
+            Point3f pt = new Point3f();
+            for (int i = 0; i < 8; ++i)
+            {
+                pt.set(
+                        ((i & 1) == 0) ? volumeRadius.x : -volumeRadius.x,
+                        ((i & 2) == 0) ? volumeRadius.y : -volumeRadius.y,
+                        ((i & 4) == 0) ? volumeRadius.z : -volumeRadius.z
+                        );
+                lightMvMtx.transform(pt);
+                minX = Math.min(pt.x, minX);
+                maxX = Math.max(pt.x, maxX);
+                minY = Math.min(pt.y, minY);
+                maxY = Math.max(pt.y, maxY);
+                minZ = Math.min(pt.z, minZ);
+                maxZ = Math.max(pt.z, maxZ);
+            }
+            MatrixUtil.frustumOrtho(lightProjMtx,
+                    minX, maxX, minY, maxY, minZ, maxZ);
+//System.err.println(String.format("Vol %f Max/min x[%f %f] y[%f %f] z[%f %f]", volSize, minX, maxX, minY, maxY, minZ, maxZ));
+//            MatrixUtil.frustumOrtho(lightProjMtx,
+//                    -volSize, volSize, -volSize, volSize, -volSize, volSize);
+        }
+        lightMvpMtx.mul(lightProjMtx, lightMvMtx);
     }
 
     private Vector3f getPlaneNormal()
@@ -191,61 +312,103 @@ public class ViewerCube implements DataChangeListener
         return planeNormal;
     }
 
-    private Point3f getViewerPos()
+    private Matrix4f getLightProjMtx()
     {
-        if (viewerPos == null)
+        if (lightProjMtx == null)
         {
             buildCache();
         }
-        return viewerPos;
+        return lightProjMtx;
     }
 
-    private Vector3f getViewerDir()
+    private Matrix4f getLightMvMtx()
     {
-        if (viewerDir == null)
+        if (lightMvMtx == null)
         {
             buildCache();
         }
-        return viewerDir;
+        return lightMvMtx;
+    }
+
+    private Matrix4f getLightMvpMtx()
+    {
+        if (lightMvpMtx == null)
+        {
+            buildCache();
+        }
+        return lightMvpMtx;
+    }
+
+    FloatBuffer mtxBuf = BufferUtil.newFloatBuffer(16);
+    private void setupViewerCamera(GL gl)
+    {
+        gl.glMatrixMode(GL.GL_PROJECTION);
+        gl.glLoadIdentity();
+        MatrixUtil.setMatrixc(viewerProjMtx, mtxBuf);
+        mtxBuf.rewind();
+        gl.glLoadMatrixf(mtxBuf);
+
+        gl.glMatrixMode(GL.GL_MODELVIEW);
+        gl.glLoadIdentity();
+        MatrixUtil.setMatrixc(viewerMvMtx, mtxBuf);
+        mtxBuf.rewind();
+        gl.glLoadMatrixf(mtxBuf);
+    }
+
+    private void setupLightCamera(GL gl)
+    {
+        gl.glMatrixMode(GL.GL_PROJECTION);
+        gl.glLoadIdentity();
+        MatrixUtil.setMatrixc(getLightProjMtx(), mtxBuf);
+        mtxBuf.rewind();
+        gl.glLoadMatrixf(mtxBuf);
+
+        gl.glMatrixMode(GL.GL_MODELVIEW);
+        gl.glLoadIdentity();
+        MatrixUtil.setMatrixc(getLightMvMtx(), mtxBuf);
+        mtxBuf.rewind();
+        gl.glLoadMatrixf(mtxBuf);
+    }
+
+    private void setupHUDCamera(GL gl)
+    {
+        gl.glMatrixMode(GL.GL_PROJECTION);
+        gl.glLoadIdentity();
+
+        gl.glMatrixMode(GL.GL_MODELVIEW);
+        gl.glLoadIdentity();
     }
 
     public void render(GLAutoDrawable drawable)
     {
         GL gl = drawable.getGL();
-        GLU glu = new GLU();
 
         gl.glShadeModel(GL.GL_FLAT);
 //        gl.glEnable(GL.GL_DEPTH_TEST);
 
-        Point3f pos = getViewerPos();
 
-        gl.glPushMatrix();
-        gl.glLoadIdentity();
-        glu.gluLookAt(
-                pos.x, pos.y, pos.z,
-                0, 0, 0,
-                0, 1, 0);
+        setupViewerCamera(gl);
 
         //Draw bounds
-        gl.glColor3f(1, .5f, 1);
-        wire.render(drawable);
+        if (drawWireframe)
+        {
+            gl.glColor3f(1, .5f, 1);
+            gl.glPushMatrix();
+            gl.glScalef(volumeRadius.x, volumeRadius.y, volumeRadius.z);
+            wire.render(drawable);
+            gl.glPopMatrix();
+        }
 
         if (data != null)
         {
-
 //            {
 //                gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_LINE);
 //                planes.setBoxRadius(volumeRadius);
 //                planes.setNormal(getPlaneNormal());
-//                planes.render(drawable, frontToBack);
+//                planes.render(drawable, 1, this);
 //                gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_FILL);
 //            }
-
-//        if (true)
-//        {
-//            gl.glPopMatrix();
-//            return;
-//        }
+            lightBuffer.clear(drawable, lightColor);
 
             gl.glActiveTexture(GL.GL_TEXTURE0);
             data.bindTexture3d(drawable);
@@ -255,26 +418,150 @@ public class ViewerCube implements DataChangeListener
             data.bindTextureXfer(drawable);
             shader.setTexXferId(1);
 
-            shader.setLightingStyle(lightingStyle);
+            gl.glActiveTexture(GL.GL_TEXTURE2);
+            lightBuffer.bindLightTexture(drawable);
+            shader.setTexLightMapId(2);
+
+            gl.glActiveTexture(GL.GL_TEXTURE3);
+            sectorMask.bindTexture(drawable);
+            shader.setTexOctantMask(3);
+
+            shader.setOctantCenter(sectorMask.getCenter());
+            
+//            shader.setLightingStyle(lightingStyle);
+            shader.setLightMvp(getLightMvpMtx());
             shader.setLightColor(lightColor);
-            shader.setLightDir(lightDir);
-            shader.setViewDir(getViewerDir());
-//            shader.setOpacityCorrect(1 - (float)Math.pow(1 - .9f, 100f / planes.getNumPlanes()));
-//            shader.setOpacityCorrect(1f / planes.getNumPlanes());
+//            shader.setLightDir(lightDir);
+//            shader.setViewDir(new Vector3f(0, 0, 1));
+            shader.setLightDir(getLightDirCube());
+            shader.setViewDir(getViewerDirCube());
             shader.setOpacityCorrect(opacityReference / planes.getNumPlanes());
 
-            shader.bind(drawable, frontToBack);
 
             planes.setBoxRadius(volumeRadius);
             planes.setNormal(getPlaneNormal());
-            planes.render(drawable, frontToBack);
-System.err.println("Ftb: " + frontToBack);
+            planes.render(drawable, lightingStyle.getNumPasses(), this);
+//System.err.println("Ftb: " + frontToBack);
 
             gl.glActiveTexture(GL.GL_TEXTURE0);
-            shader.unbind(drawable);
+        }
+//        lightBuffer.dumpLightTexture(drawable);
+
+        //Display light buffer
+        if (drawLightbuffer && lightingStyle == LightingStyle.DIFFUSE)
+        {
+//            lightBuffer.dumpLightTexture(drawable);
+
+            setupHUDCamera(gl);
+
+            gl.glEnable(GL.GL_BLEND);
+//            gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+            gl.glBlendFunc(GL.GL_ONE_MINUS_SRC_ALPHA, GL.GL_ZERO);
+
+            gl.glActiveTexture(GL.GL_TEXTURE0);
+            
+            gl.glEnable(GL.GL_TEXTURE_RECTANGLE_EXT);
+            gl.glTexEnvf(GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_REPLACE);
+            lightBuffer.bindLightTexture(drawable);
+
+            gl.glBegin(GL.GL_QUADS);
+            {
+                final int w = LightBuffer.getLightTextureWidth();
+                final int h = LightBuffer.getLightTextureHeight();
+
+                gl.glTexCoord2f(0, 0); gl.glVertex2f(0, 0);
+//                gl.glTexCoord2f(1, 0); gl.glVertex2f(1, 0);
+//                gl.glTexCoord2f(1, 1); gl.glVertex2f(1, 1);
+//                gl.glTexCoord2f(0, 1); gl.glVertex2f(0, 1);
+                gl.glTexCoord2f(w, 0); gl.glVertex2f(1, 0);
+                gl.glTexCoord2f(w, h); gl.glVertex2f(1, 1);
+                gl.glTexCoord2f(0, h); gl.glVertex2f(0, 1);
+            }
+            gl.glEnd();
+            
+            lightBuffer.unbindLightTexture(drawable);
+            gl.glDisable(GL.GL_TEXTURE_RECTANGLE_EXT);
+            gl.glDisable(GL.GL_BLEND);
+        }
+        
+    }
+
+    FloatBuffer bufferMtx = BufferUtil.newFloatBuffer(16);
+    public void startSlice(GLAutoDrawable drawable, int iteration)
+    {
+        switch (lightingStyle)
+        {
+            case NONE:
+                shader.setPassType(PassType.COLOR);
+                shader.bind(drawable, frontToBack);
+                break;
+            case PHONG:
+                shader.setPassType(PassType.PHONG);
+                shader.bind(drawable, frontToBack);
+                break;
+            case DIFFUSE:
+                GL gl = drawable.getGL();
+                switch (iteration)
+                {
+                    case 0:
+                        setupViewerCamera(gl);
+                        lightBuffer.flushToTexture(drawable);
+                        shader.setPassType(PassType.LIGHTMAP);
+                        shader.bind(drawable, frontToBack);
+//                        gl.glEnable(GL.GL_MULTISAMPLE);
+                        break;
+                    case 1:
+                        setupLightCamera(gl);
+                        lightBuffer.bind(drawable);
+                        shader.setPassType(PassType.ALPHA);
+                        shader.bind(drawable, true);
+                        break;
+                }
+                break;
         }
 
-        gl.glPopMatrix();
+    }
+
+    public void endSlice(GLAutoDrawable drawable, int iteration)
+    {
+        switch (lightingStyle)
+        {
+            case NONE:
+            case PHONG:
+                shader.unbind(drawable);
+                break;
+            case DIFFUSE:
+                switch (iteration)
+                {
+                    case 0:
+                        shader.unbind(drawable);
+//                        gl.glDisable(GL.GL_MULTISAMPLE);
+                        break;
+                    case 1:
+                        lightBuffer.unbind(drawable);
+                        shader.unbind(drawable);
+                        break;
+                }
+                break;
+        }
+    }
+
+    public Vector3f getLightDirCube()
+    {
+        if (lightDirCube == null)
+        {
+            buildCache();
+        }
+        return new Vector3f(lightDirCube);
+    }
+
+    public Vector3f getViewerDirCube()
+    {
+        if (viewerDirCube == null)
+        {
+            buildCache();
+        }
+        return new Vector3f(viewerDirCube);
     }
 
     /**
@@ -308,51 +595,6 @@ System.err.println("Ftb: " + frontToBack);
         this.volumeRadius.set(volumeRadius);
         clearCache();
         propertyChangeSupport.firePropertyChange(PROP_VOLUMERADIUS, oldVolumeRadius, volumeRadius);
-    }
-
-    /**
-     * @return the viewerRadius
-     */
-    public float getViewerRadius() {
-        return viewerRadius;
-    }
-
-    /**
-     * @param viewerRadius the viewerRadius to set
-     */
-    public void setViewerRadius(float viewerRadius) {
-        this.viewerRadius = viewerRadius;
-        clearCache();
-    }
-
-    /**
-     * @return the viewerYaw
-     */
-    public float getViewerYaw() {
-        return viewerYaw;
-    }
-
-    /**
-     * @param viewerYaw the viewerYaw to set
-     */
-    public void setViewerYaw(float viewerYaw) {
-        this.viewerYaw = viewerYaw;
-        clearCache();
-    }
-
-    /**
-     * @return the viewerPitch
-     */
-    public float getViewerPitch() {
-        return viewerPitch;
-    }
-
-    /**
-     * @param viewerPitch the viewerPitch to set
-     */
-    public void setViewerPitch(float viewerPitch) {
-        this.viewerPitch = viewerPitch;
-        clearCache();
     }
 
     /**
@@ -444,27 +686,6 @@ System.err.println("Ftb: " + frontToBack);
     }
 
     /**
-     * Get the value of followViewer
-     *
-     * @return the value of followViewer
-     */
-    public boolean isFollowViewer() {
-        return followViewer;
-    }
-
-    /**
-     * Set the value of followViewer
-     *
-     * @param followViewer new value of followViewer
-     */
-    public void setFollowViewer(boolean followViewer) {
-        boolean oldFollowViewer = this.followViewer;
-        this.followViewer = followViewer;
-        clearCache();
-        propertyChangeSupport.firePropertyChange(PROP_FOLLOWVIEWER, oldFollowViewer, followViewer);
-    }
-
-    /**
      * Get the value of lightingStyle
      *
      * @return the value of lightingStyle
@@ -502,6 +723,97 @@ System.err.println("Ftb: " + frontToBack);
         float oldOpacityReference = this.opacityReference;
         this.opacityReference = opacityReference;
         propertyChangeSupport.firePropertyChange(PROP_OPACITYREFERENCE, oldOpacityReference, opacityReference);
+    }
+
+    /**
+     * Get the value of viewerProjMtx
+     *
+     * @return the value of viewerProjMtx
+     */
+    public Matrix4f getViewerProjMtx() {
+        return new Matrix4f(viewerProjMtx);
+    }
+
+    /**
+     * Set the value of viewerProjMtx
+     *
+     * @param viewerProjMtx new value of viewerProjMtx
+     */
+    public void setViewerProjMtx(Matrix4f viewerProjMtx) {
+        Matrix4f oldViewerProjMtx = this.viewerProjMtx;
+        this.viewerProjMtx.set(viewerProjMtx);
+        clearCache();
+        propertyChangeSupport.firePropertyChange(PROP_VIEWERPROJMTX, oldViewerProjMtx, viewerProjMtx);
+    }
+
+    /**
+     * Get the value of viewerMvMtx
+     *
+     * @return the value of viewerMvMtx
+     */
+    public Matrix4f getViewerMvMtx() {
+        return new Matrix4f(viewerMvMtx);
+    }
+
+    /**
+     * Set the value of viewerMvMtx
+     *
+     * @param viewerMvMtx new value of viewerMvMtx
+     */
+    public void setViewerMvMtx(Matrix4f viewerMvMtx) {
+        Matrix4f oldViewerMvMtx = this.viewerMvMtx;
+        this.viewerMvMtx.set(viewerMvMtx);
+        clearCache();
+        propertyChangeSupport.firePropertyChange(PROP_VIEWERMVMTX, oldViewerMvMtx, viewerMvMtx);
+    }
+
+    /**
+     * Get the value of drawLightbuffer
+     *
+     * @return the value of drawLightbuffer
+     */
+    public boolean isDrawLightbuffer() {
+        return drawLightbuffer;
+    }
+
+    /**
+     * Set the value of drawLightbuffer
+     *
+     * @param drawLightbuffer new value of drawLightbuffer
+     */
+    public void setDrawLightbuffer(boolean drawLightbuffer) {
+        boolean oldDrawLightbuffer = this.drawLightbuffer;
+        this.drawLightbuffer = drawLightbuffer;
+        propertyChangeSupport.firePropertyChange(PROP_DRAWLIGHTBUFFER, oldDrawLightbuffer, drawLightbuffer);
+    }
+
+    /**
+     * Get the value of drawWireframe
+     *
+     * @return the value of drawWireframe
+     */
+    public boolean isDrawWireframe() {
+        return drawWireframe;
+    }
+
+    /**
+     * Set the value of drawWireframe
+     *
+     * @param drawWireframe new value of drawWireframe
+     */
+    public void setDrawWireframe(boolean drawWireframe)
+    {
+        boolean oldDrawWireframe = this.drawWireframe;
+        this.drawWireframe = drawWireframe;
+        propertyChangeSupport.firePropertyChange(PROP_DRAWWIREFRAME, oldDrawWireframe, drawWireframe);
+    }
+
+    /**
+     * @return the octantMask
+     */
+    public SectorMask getOctantMask()
+    {
+        return sectorMask;
     }
 
 }

@@ -22,27 +22,20 @@
 
 package com.kitfox.volume.viewer;
 
-import com.sun.opengl.util.BufferUtil;
+import com.kitfox.volume.MatrixUtil;
+import com.kitfox.xml.schema.volumeviewer.cubestate.NavigatorType;
 import java.awt.Color;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.imageio.ImageIO;
 import javax.media.opengl.DebugGL;
 import javax.media.opengl.GL;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCanvas;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLEventListener;
-import javax.media.opengl.glu.GLU;
 import javax.swing.event.ChangeEvent;
+import javax.vecmath.Matrix4f;
 
 /**
  *
@@ -64,19 +57,32 @@ public class ViewerPanel extends GLCanvas
 
     private ViewerCube cube;
 
-    int volumeFrameBufId;
-    int volumeTexId;
-    int volumeRenderBufId;
+    final ViewportNavigator nav = new ViewportNavigator();
 
     /** Creates new form ViewerPanel */
     public ViewerPanel()
     {
         super(getCapabilities());
-//        setOpaque(false);
+
+        nav.setViewerPitch(0);
+        nav.setViewerRadius(7);
+//        nav.setViewerYaw(90);
+        nav.setViewerYaw(0);
 
         addGLEventListener(this);
+        nav.addPropertyChangeListener(this);
 
         initComponents();
+    }
+
+    public NavigatorType save()
+    {
+        return nav.save();
+    }
+
+    public void load(NavigatorType target)
+    {
+        nav.load(target);
     }
 
     private static GLCapabilities getCapabilities()
@@ -84,13 +90,15 @@ public class ViewerPanel extends GLCanvas
         GLCapabilities cap = new GLCapabilities();
 
         cap.setAlphaBits(8);
+        cap.setHardwareAccelerated(true);
+        cap.setSampleBuffers(true);
+        cap.setNumSamples(8);
+
         return cap;
     }
 
     public void init(GLAutoDrawable drawable)
     {
-//        GLCapabilities cap = getCapabilities();
-
         //Debug
         drawable.setGL(new DebugGL(drawable.getGL()));
 
@@ -104,18 +112,6 @@ public class ViewerPanel extends GLCanvas
 
         gl.glShadeModel(GL.GL_FLAT);
 
-        {
-            IntBuffer ibuf = BufferUtil.newIntBuffer(1);
-
-            gl.glGenFramebuffersEXT(1, ibuf);
-            volumeFrameBufId = ibuf.get(0);
-
-            gl.glGenRenderbuffersEXT(1, ibuf);
-            volumeRenderBufId = ibuf.get(0);
-
-            gl.glGenTextures(1, ibuf);
-            volumeTexId = ibuf.get(0);
-        }
     }
 
     float[] colArr = new float[3];
@@ -124,234 +120,60 @@ public class ViewerPanel extends GLCanvas
     {
         GL gl = drawable.getGL();
 
-        setViewerCamera(gl, viewWidth, viewHeight);
-
-        {
-            IntBuffer ibuf = BufferUtil.newIntBuffer(1);
-            gl.glGetIntegerv(GL.GL_ALPHA_BITS, ibuf);
-            int alphaBits = ibuf.get(0);
-            alphaBits += 0;
-        }
+//        {
+//            IntBuffer ibuf = BufferUtil.newIntBuffer(1);
+////            gl.glGetIntegerv(GL.GL_ALPHA_BITS, ibuf);
+////            int alphaBits = ibuf.get(0);
+////            alphaBits += 0;
+//            ibuf.rewind();
+//            gl.glGetIntegerv(GL.GL_SAMPLE_BUFFERS, ibuf);
+//            System.out.println("number of sample buffers is " + ibuf.get(0));
+//            ibuf.rewind();
+//            gl.glGetIntegerv(GL.GL_SAMPLES, ibuf);
+//            System.out.println("number of samples is " + ibuf.get(0));
+//        }
 
         {
             //Clear
             Color bg = getBackground();
             bg.getColorComponents(colArr);
-    //        gl.glClearColor(colArr[0], colArr[1], colArr[2], 0.0f);
+//            gl.glClearColor(colArr[0], colArr[1], colArr[2], 0.0f);
             gl.glClearColor(0, 0, 0, 0.0f);
             gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT | GL.GL_STENCIL_BUFFER_BIT);
 //            gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 
+            gl.glEnable(GL.GL_MULTISAMPLE);
+
             //Draw view cube
             ViewerCube curCube = cube;
             if (curCube != null)
             {
+                curCube.setViewerMvMtx(nav.getModelViewMtx());
                 curCube.render(drawable);
             }
+
+            gl.glDisable(GL.GL_MULTISAMPLE);
         }
 
-    }
-
-    public void display_(GLAutoDrawable drawable)
-    {
-        GL gl = drawable.getGL();
-
-        setViewerCamera(gl, viewWidth, viewHeight);
-
-        gl.glActiveTexture(GL.GL_TEXTURE0);
-        gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, volumeFrameBufId);
-        gl.glViewport(0, 0, viewWidth, viewHeight);
-//        gl.glPushAttrib(GL.GL_VIEWPORT_BIT);
-//        gl.glViewport(0, 0, getWidth(), getHeight());
-
-//        setHUDCamera(gl, viewWidth, viewHeight);
-//        gl.glLoadIdentity();
-
-        {
-            //Clear
-            Color bg = getBackground();
-            bg.getColorComponents(colArr);
-    //        gl.glClearColor(colArr[0], colArr[1], colArr[2], 0.0f);
-            gl.glClearColor(0, 1, 0, 0.0f);
-            gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT | GL.GL_STENCIL_BUFFER_BIT);
-//            gl.glClear(GL.GL_COLOR_BUFFER_BIT);
-
-            //Draw view cube
-//            {
-//                gl.glColor3f(1, 0, 1);
-//
-//                GLU glu = new GLU();
-//                gl.glLoadIdentity();
-//                glu.gluLookAt(
-//                        0, 0, -7,
-//                        0, 0, 0,
-//                        0, 1, 0);
-//
-//                GLUT glut = new GLUT();
-////                glut.glutWireTeapot(1);
-//                glut.glutSolidTeapot(1);
-//            }
-            ViewerCube curCube = cube;
-            if (curCube != null)
-            {
-                curCube.render(drawable);
-            }
-//            gl.glBegin(GL.GL_QUADS);
-//            {
-//                gl.glTexCoord2f(0, 0); gl.glVertex2f(-1.9f, -1.9f);
-//                gl.glTexCoord2f(1, 0); gl.glVertex2f(5.9f, -1.9f);
-//                gl.glTexCoord2f(1, 1); gl.glVertex2f(5.9f, 11.9f);
-//                gl.glTexCoord2f(0, 1); gl.glVertex2f(-1.9f, 11.9f);
-//            }
-//            gl.glEnd();
-        }
-
-//        gl.glPopAttrib();
-        gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, 0);
-
-
-        setHUDCamera(gl, viewWidth, viewHeight);
-        gl.glLoadIdentity();
-
-        gl.glEnable(GL.GL_TEXTURE_RECTANGLE_EXT);
-        gl.glTexEnvf(GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_REPLACE);
-        gl.glBindTexture(GL.GL_TEXTURE_RECTANGLE_EXT, volumeTexId);
-
-        {
-            byte[] buf = new byte[viewWidth * viewHeight * 4];
-            ByteBuffer bb = BufferUtil.newByteBuffer(buf.length);
-            gl.glGetTexImage(GL.GL_TEXTURE_RECTANGLE_EXT, 0, GL.GL_RGBA,
-                    GL.GL_UNSIGNED_BYTE, bb);
-            bb.rewind();
-            bb.get(buf);
-            byte h = buf[0];
-
-            bb.rewind();
-            BufferedImage img = new BufferedImage(viewWidth, viewHeight, BufferedImage.TYPE_INT_ARGB);
-            for (int j = 0; j < viewHeight; ++j)
-            {
-                for (int i = 0; i < viewWidth; ++i)
-                {
-                    int argb = ((bb.get() * 0xff) << 0)
-                            | ((bb.get() * 0xff) << 24)
-                            | ((bb.get() * 0xff) << 16)
-                            | ((bb.get() * 0xff) << 8);
-
-                    img.setRGB(i, j, argb);
-                }
-            }
-            try {
-                ImageIO.write(img, "png", new File("frame.png"));
-            } catch (IOException ex) {
-                Logger.getLogger(ViewerPanel.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
-        }
-
-            gl.glClearColor(0, 0, 0, 1f);
-            gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT | GL.GL_STENCIL_BUFFER_BIT);
-            gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
-
-//        gl.glColor3f(1, 0, 0);
-        gl.glBegin(GL.GL_QUADS);
-        {
-            gl.glTexCoord2f(0, 0); gl.glVertex2f(-.9f, -.9f);
-            gl.glTexCoord2f(viewWidth, 0); gl.glVertex2f(1, -1);
-            gl.glTexCoord2f(viewWidth, viewHeight); gl.glVertex2f(.9f, .9f);
-            gl.glTexCoord2f(0, viewHeight); gl.glVertex2f(-1, 1);
-//            gl.glTexCoord2f(1, 0); gl.glVertex2f(1, -1);
-//            gl.glTexCoord2f(1, 1); gl.glVertex2f(.9f, .9f);
-//            gl.glTexCoord2f(0, 1); gl.glVertex2f(-1, 1);
-
-        }
-        gl.glEnd();
-        gl.glBindTexture(GL.GL_TEXTURE_RECTANGLE_EXT, 0);
-
-
-//        System.err.println("display");
-    }
-
-    int viewWidth;
-    int viewHeight;
-
-    private void setViewerCamera(GL gl, int width, int height)
-    {
-        GLU glu = new GLU();
-
-        gl.glMatrixMode(GL.GL_PROJECTION);
-        gl.glLoadIdentity();
-
-        if (height <= 0)
-        {
-            height = 1;
-        }
-        final float scrnAspect = (float)width / height;
-        glu.gluPerspective(fovY, scrnAspect * aspect, nearPlane, farPlane);
-
-
-        gl.glMatrixMode(GL.GL_MODELVIEW);
-    }
-
-    private void setHUDCamera(GL gl, int width, int height)
-    {
-        gl.glMatrixMode(GL.GL_PROJECTION);
-        gl.glLoadIdentity();
-
-        gl.glMatrixMode(GL.GL_MODELVIEW);
     }
 
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height)
     {
         GL gl = drawable.getGL();
 
-        viewWidth = width;
-        viewHeight = height;
-
         gl.glViewport(x, y, width, height);
 
-//        System.err.println("reshape");
-
+        //Calc projection matrix
+        Matrix4f proj = new Matrix4f();
+        if (height <= 0)
         {
-            //Create render to texture buffer
-            gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, volumeFrameBufId);
-
-            gl.glBindTexture(GL.GL_TEXTURE_RECTANGLE_EXT, volumeTexId);
-            gl.glTexImage2D(GL.GL_TEXTURE_RECTANGLE_EXT, 0, GL.GL_RGBA8,
-                    width, height,
-                    0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE,
-                    null);
-            gl.glFramebufferTexture2DEXT(
-                    GL.GL_FRAMEBUFFER_EXT,
-                    GL.GL_COLOR_ATTACHMENT0_EXT,
-                    GL.GL_TEXTURE_RECTANGLE_EXT, volumeTexId, 0);
-
-
-            gl.glBindRenderbufferEXT(GL.GL_RENDERBUFFER_EXT, volumeRenderBufId);
-            gl.glRenderbufferStorageEXT(GL.GL_RENDERBUFFER_EXT,
-                    GL.GL_DEPTH_COMPONENT,
-                    width, height);
-            gl.glFramebufferRenderbufferEXT(
-                    GL.GL_FRAMEBUFFER_EXT,
-                    GL.GL_DEPTH_ATTACHMENT_EXT,
-                    GL.GL_RENDERBUFFER_EXT,
-                    volumeRenderBufId);
-
-            int status = gl.glCheckFramebufferStatusEXT(GL.GL_FRAMEBUFFER_EXT);
-            switch (status)
-            {
-                case GL.GL_FRAMEBUFFER_COMPLETE_EXT:
-                    break;
-                case GL.GL_FRAMEBUFFER_UNSUPPORTED_EXT:
-                    throw new RuntimeException("Framebuffer unsupported");
-                default:
-                    throw new RuntimeException("Incomplete buffer " + status);
-            }
-
-
-            gl.glBindTexture(GL.GL_TEXTURE_2D, 0);
-            gl.glBindRenderbufferEXT(GL.GL_RENDERBUFFER_EXT, 0);
-            gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, 0);
+            height = 1;
         }
+        final float scrnAspect = (float)width / height;
+        MatrixUtil.frustumPersp(proj, fovY, scrnAspect * aspect, nearPlane, farPlane);
+        cube.setViewerProjMtx(proj);
+
+//        System.err.println("reshape");
     }
 
     public void displayChanged(GLAutoDrawable drawable, boolean modeChanged, boolean deviceChanged)
@@ -393,14 +215,9 @@ public class ViewerPanel extends GLCanvas
     //cube
 
     private void formMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_formMousePressed
-        if (cube == null)
-        {
-            return;
-        }
-
         oldMouse = evt;
-        startYaw = cube.getViewerYaw();
-        startPitch = cube.getViewerPitch();
+        startYaw = nav.getViewerYaw();
+        startPitch = nav.getViewerPitch();
     }//GEN-LAST:event_formMousePressed
 
     private void formMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_formMouseReleased
@@ -408,33 +225,23 @@ public class ViewerPanel extends GLCanvas
     }//GEN-LAST:event_formMouseReleased
 
     private void formMouseDragged(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_formMouseDragged
-        if (cube == null)
-        {
-            return;
-        }
-
         int dx = evt.getX() - oldMouse.getX();
         int dy = evt.getY() - oldMouse.getY();
 
-        float newYaw = startYaw + dx * cameraAngularVel;
-        float newPitch = startPitch - dy;
+        float newYaw = startYaw - dx * cameraAngularVel;
+        float newPitch = startPitch + dy;
         newPitch = Math.min(Math.max(newPitch, -85), 85);
 
-        cube.setViewerYaw(newYaw);
-        cube.setViewerPitch(newPitch);
+        nav.setViewerYaw(newYaw);
+        nav.setViewerPitch(newPitch);
         repaint();
     }//GEN-LAST:event_formMouseDragged
 
     private void formMouseWheelMoved(java.awt.event.MouseWheelEvent evt) {//GEN-FIRST:event_formMouseWheelMoved
-        if (cube == null)
-        {
-            return;
-        }
-
-        float newRad = cube.getViewerRadius() + evt.getWheelRotation() * cameraZoomVel;
+        float newRad = nav.getViewerRadius() + evt.getWheelRotation() * cameraZoomVel;
         newRad = Math.max(Math.min(newRad, maxUserRadius), minUserRadius);
 
-        cube.setViewerRadius(newRad);
+        nav.setViewerRadius(newRad);
         repaint();
     }//GEN-LAST:event_formMouseWheelMoved
 
@@ -579,10 +386,18 @@ public class ViewerPanel extends GLCanvas
 
     public void propertyChange(PropertyChangeEvent evt)
     {
+        if (evt.getSource() == nav)
+        {
+            if (cube != null)
+            {
+                cube.setViewerMvMtx(nav.getModelViewMtx());
+            }
+        }
         repaint();
     }
 
-    public void dataChanged(ChangeEvent evt) {
+    public void dataChanged(ChangeEvent evt)
+    {
         repaint();
     }
 

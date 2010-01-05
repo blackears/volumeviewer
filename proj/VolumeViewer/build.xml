@@ -71,4 +71,32 @@
     nbproject/build-impl.xml file. 
 
     -->
+
+    <target name="-post-clean">
+        <delete includeEmptyDirs="true">
+            <fileset dir="gen" includes="**/*"/>
+        </delete>
+    </target>
+
+    <target name="-pre-compile">
+        <antcall target="bind-preferences"/>
+    </target>
+
+    <target name="bind-preferences" depends="init">
+        <taskdef name="xjc" classname="com.sun.tools.xjc.XJCTask">
+            <classpath>
+                <pathelement path="${javac.classpath}"/>
+            </classpath>
+        </taskdef>
+
+        <xjc destdir="gen" extension="true" removeOldOutput="true">
+            <schema dir="src">
+                <include name="**/*.xsd"/>
+            </schema>
+            <produces dir="gen">
+                <include name="**/*.java"/>
+            </produces>
+        </xjc>
+    </target>
+
 </project>

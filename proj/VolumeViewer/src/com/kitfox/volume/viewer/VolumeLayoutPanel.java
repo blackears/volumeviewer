@@ -22,6 +22,9 @@
 
 package com.kitfox.volume.viewer;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import javax.swing.JSlider;
 import javax.vecmath.Vector3f;
 
 /**
@@ -29,6 +32,7 @@ import javax.vecmath.Vector3f;
  * @author kitfox
  */
 public class VolumeLayoutPanel extends javax.swing.JPanel
+        implements PropertyChangeListener
 {
     private static final long serialVersionUID = 0;
 
@@ -36,10 +40,35 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
     protected ViewerCube cube;
     public static final String PROP_CUBE = "cube";
 
+    boolean updating = false;
+
     /** Creates new form VolumeLayoutPanel */
     public VolumeLayoutPanel()
     {
         initComponents();
+    }
+
+    public void propertyChange(PropertyChangeEvent evt)
+    {
+        updateFromCube();
+    }
+
+    private void updateFromCube()
+    {
+        updating = true;
+
+        slider_slices.setValue(cube.getNumPlanes());
+        Vector3f volRad = cube.getVolumeRadius();
+        slider_width.setValue((int)(volRad.x * 100));
+        slider_height.setValue((int)(volRad.y * 100));
+        slider_depth.setValue((int)(volRad.z * 100));
+
+        slider_opacity.setValue((int)cube.getOpacityReference());
+
+        check_showBounds.setSelected(cube.isDrawWireframe());
+        check_showLightbuffer.setSelected(cube.isDrawLightbuffer());
+
+        updating = false;
     }
 
     /** This method is called from within the constructor to
@@ -59,13 +88,14 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
         slider_height = new javax.swing.JSlider();
         jLabel4 = new javax.swing.JLabel();
         slider_depth = new javax.swing.JSlider();
-        check_followViewer = new javax.swing.JCheckBox();
+        check_showBounds = new javax.swing.JCheckBox();
         slider_opacity = new javax.swing.JSlider();
         jLabel5 = new javax.swing.JLabel();
+        check_showLightbuffer = new javax.swing.JCheckBox();
 
         jLabel1.setText("Slices");
 
-        slider_slices.setMaximum(500);
+        slider_slices.setMaximum(700);
         slider_slices.setMinimum(1);
         slider_slices.setValue(5);
         slider_slices.addChangeListener(new javax.swing.event.ChangeListener() {
@@ -104,16 +134,17 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
             }
         });
 
-        check_followViewer.setSelected(true);
-        check_followViewer.setText("Follow Viewer");
-        check_followViewer.addActionListener(new java.awt.event.ActionListener() {
+        check_showBounds.setSelected(true);
+        check_showBounds.setText("Show Bounds");
+        check_showBounds.setToolTipText("Draw box around all volume data");
+        check_showBounds.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                check_followViewerActionPerformed(evt);
+                check_showBoundsActionPerformed(evt);
             }
         });
 
         slider_opacity.setMajorTickSpacing(1);
-        slider_opacity.setMaximum(500);
+        slider_opacity.setMaximum(700);
         slider_opacity.setValue(5);
         slider_opacity.addChangeListener(new javax.swing.event.ChangeListener() {
             public void stateChanged(javax.swing.event.ChangeEvent evt) {
@@ -122,6 +153,15 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
         });
 
         jLabel5.setText("Opacity");
+
+        check_showLightbuffer.setSelected(true);
+        check_showLightbuffer.setText("Show Lightbuffer");
+        check_showLightbuffer.setToolTipText("Display lighting calculations onscreen");
+        check_showLightbuffer.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                check_showLightbufferActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -144,7 +184,10 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(slider_width, javax.swing.GroupLayout.DEFAULT_SIZE, 322, Short.MAX_VALUE)
                                     .addComponent(slider_height, javax.swing.GroupLayout.DEFAULT_SIZE, 322, Short.MAX_VALUE)))))
-                    .addComponent(check_followViewer)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(check_showBounds)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(check_showLightbuffer))
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel1)
@@ -171,7 +214,9 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
                     .addComponent(jLabel4)
                     .addComponent(slider_depth, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(check_followViewer)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(check_showBounds)
+                    .addComponent(check_showLightbuffer))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel1)
@@ -185,34 +230,66 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
     }// </editor-fold>//GEN-END:initComponents
 
     private void slider_slicesStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_slider_slicesStateChanged
+        if (updating)
+        {
+            return;
+        }
         cube.setNumPlanes(slider_slices.getValue());
 }//GEN-LAST:event_slider_slicesStateChanged
 
-    private void check_followViewerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_check_followViewerActionPerformed
-        cube.setFollowViewer(check_followViewer.isSelected());
-    }//GEN-LAST:event_check_followViewerActionPerformed
+    private void check_showBoundsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_check_showBoundsActionPerformed
+        if (updating)
+        {
+            return;
+        }
+        cube.setDrawWireframe(check_showBounds.isSelected());
+    }//GEN-LAST:event_check_showBoundsActionPerformed
 
     private void slider_widthStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_slider_widthStateChanged
+        if (updating)
+        {
+            return;
+        }
         Vector3f rad = cube.getVolumeRadius();
         rad.x = slider_width.getValue() / 100f;
         cube.setVolumeRadius(rad);
     }//GEN-LAST:event_slider_widthStateChanged
 
     private void slider_heightStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_slider_heightStateChanged
+        if (updating)
+        {
+            return;
+        }
         Vector3f rad = cube.getVolumeRadius();
         rad.y = slider_height.getValue() / 100f;
         cube.setVolumeRadius(rad);
     }//GEN-LAST:event_slider_heightStateChanged
 
     private void slider_depthStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_slider_depthStateChanged
+        if (updating)
+        {
+            return;
+        }
         Vector3f rad = cube.getVolumeRadius();
         rad.z = slider_depth.getValue() / 100f;
         cube.setVolumeRadius(rad);
     }//GEN-LAST:event_slider_depthStateChanged
 
     private void slider_opacityStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_slider_opacityStateChanged
+        if (updating)
+        {
+            return;
+        }
         cube.setOpacityReference(slider_opacity.getValue());
     }//GEN-LAST:event_slider_opacityStateChanged
+
+    private void check_showLightbufferActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_check_showLightbufferActionPerformed
+        if (updating)
+        {
+            return;
+        }
+        cube.setDrawLightbuffer(check_showLightbuffer.isSelected());
+    }//GEN-LAST:event_check_showLightbufferActionPerformed
 
     /**
      * Get the value of cube
@@ -230,13 +307,23 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
      */
     public void setCube(ViewerCube cube) {
         ViewerCube oldCube = this.cube;
+        if (this.cube != null)
+        {
+            cube.removePropertyChangeListener(this);
+        }
         this.cube = cube;
+        if (this.cube != null)
+        {
+            cube.addPropertyChangeListener(this);
+        }
+        updateFromCube();
         firePropertyChange(PROP_CUBE, oldCube, cube);
     }
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JCheckBox check_followViewer;
+    private javax.swing.JCheckBox check_showBounds;
+    private javax.swing.JCheckBox check_showLightbuffer;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;

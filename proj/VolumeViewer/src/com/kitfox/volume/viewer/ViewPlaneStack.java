@@ -182,7 +182,13 @@ public class ViewPlaneStack
         planesPointId = 0;
     }
 
-    public void render(GLAutoDrawable drawable, boolean frontToBack)
+    public static interface SliceTracker
+    {
+        public void startSlice(GLAutoDrawable drawable, int iteration);
+        public void endSlice(GLAutoDrawable drawable, int iteration);
+    }
+
+    public void render(GLAutoDrawable drawable, int numIterations, SliceTracker callback)
     {
         GL gl = drawable.getGL();
 
@@ -197,18 +203,19 @@ public class ViewPlaneStack
         gl.glEnableClientState(GL.GL_TEXTURE_COORD_ARRAY);
         gl.glTexCoordPointer(3, GL.GL_FLOAT, BufferUtil.SIZEOF_FLOAT * 6, BufferUtil.SIZEOF_FLOAT * 3);
 
-//        int offset = 0;
         //Slices are arranged from furthest from light to closest
         for (int i = 0; i < polyVertCounts.length; ++i)
         {
-//            int idx = frontToBack ? polyVertCounts.length - 1 - i : i;
             int idx = polyVertCounts.length - 1 - i;
-//            int idx = i;
-//            int count = polyVertCounts[frontToBack ? i : polyVertCounts.length - 1 - i];
             int count = polyVertCounts[idx];
             int offset = polyOffset[idx];
-            gl.glDrawArrays(GL.GL_TRIANGLE_FAN, offset, count);
-//            offset += count;
+
+            for (int j = 0; j < numIterations; ++j)
+            {
+                callback.startSlice(drawable, j);
+                gl.glDrawArrays(GL.GL_TRIANGLE_FAN, offset, count);
+                callback.endSlice(drawable, j);
+            }
         }
 
         gl.glDisableClientState(GL.GL_VERTEX_ARRAY);
