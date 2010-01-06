@@ -47,6 +47,11 @@ uniform mat4 lightMvp;
 varying vec3 posLocal;
 varying vec3 uv;
 
+float saturate(float value)
+{
+    return clamp(value, 0.0, 1.0);
+}
+
 void main()
 {
     //Apply mask

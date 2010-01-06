@@ -26,6 +26,7 @@ import com.kitfox.volume.light.LightCtrlPanel;
 import com.kitfox.volume.transfer.TransferFnPanel;
 import com.kitfox.volume.viewer.DataSamplerImage;
 import com.kitfox.volume.mask.SectorPanel;
+import com.kitfox.volume.viewer.GLActionSaveBuffer;
 import com.kitfox.volume.viewer.ViewerCube;
 import com.kitfox.volume.viewer.ViewerPanel;
 import com.kitfox.volume.viewer.VolumeData;
@@ -42,7 +43,6 @@ import java.awt.event.ActionEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -83,6 +83,24 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
             @Override
             public String getDescription() {
                 return "Volume Viewer config file (*.vvc)";
+            }
+        };
+        fileChooser.setFileFilter(filter);
+        fileChooser.setCurrentDirectory(new File("."));
+    }
+
+    JFileChooser fileChooserPng = new JFileChooser();
+    {
+        FileFilter filter = new FileFilter()
+        {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || f.getName().endsWith(".png");
+            }
+
+            @Override
+            public String getDescription() {
+                return "PNG image file (*.png)";
             }
         };
         fileChooser.setFileFilter(filter);
@@ -166,6 +184,8 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
                 VolViewWebstartFrame.class.getResource("/sectionedView.vvc")));
         menu_demo.add(new DemoAction("Clear Head",
                 VolViewWebstartFrame.class.getResource("/clearHead.vvc")));
+        menu_demo.add(new DemoAction("Opaque",
+                VolViewWebstartFrame.class.getResource("/opaque.vvc")));
         menu_demo.add(new DemoAction("Skull",
                 VolViewWebstartFrame.class.getResource("/skull.vvc")));
         menu_demo.add(new DemoAction("Cut Skull",
@@ -270,6 +290,8 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
         menu_file = new javax.swing.JMenu();
         cm_fileLoad = new javax.swing.JMenuItem();
         cm_fileSave = new javax.swing.JMenuItem();
+        jSeparator1 = new javax.swing.JPopupMenu.Separator();
+        cm_fileSaveSnapshot = new javax.swing.JMenuItem();
         menu_demo = new javax.swing.JMenu();
         menu_window = new javax.swing.JMenu();
         cm_winDataSource = new javax.swing.JMenuItem();
@@ -302,6 +324,15 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
             }
         });
         menu_file.add(cm_fileSave);
+        menu_file.add(jSeparator1);
+
+        cm_fileSaveSnapshot.setText("Save Snapshot...");
+        cm_fileSaveSnapshot.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cm_fileSaveSnapshotActionPerformed(evt);
+            }
+        });
+        menu_file.add(cm_fileSaveSnapshot);
 
         jMenuBar1.add(menu_file);
 
@@ -472,6 +503,29 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
 
     }//GEN-LAST:event_cm_fileSaveActionPerformed
 
+    private void cm_fileSaveSnapshotActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cm_fileSaveSnapshotActionPerformed
+        int res = fileChooserPng.showSaveDialog(this);
+
+        if (res != JFileChooser.APPROVE_OPTION)
+        {
+            return;
+        }
+
+        File file = fileChooserPng.getSelectedFile();
+        if (!file.getName().endsWith(".png"))
+        {
+            file = new File(file.getParentFile(), file.getName() + ".png");
+        }
+
+        //Do actual image fetch in GL thread
+        GLActionSaveBuffer action = new GLActionSaveBuffer(file, viewer);
+        viewer.postGLAction(action);
+        
+        //Flush GL queue
+        viewer.repaint();
+
+    }//GEN-LAST:event_cm_fileSaveSnapshotActionPerformed
+
     private void load(URL url)
     {
         try {
@@ -583,6 +637,7 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JMenuItem cm_fileLoad;
     private javax.swing.JMenuItem cm_fileSave;
+    private javax.swing.JMenuItem cm_fileSaveSnapshot;
     private javax.swing.JMenuItem cm_helpAbout;
     private javax.swing.JMenuItem cm_helpContents;
     private javax.swing.JMenuItem cm_winDataSource;
@@ -591,6 +646,7 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
     private javax.swing.JMenuItem cm_winOctant;
     private javax.swing.JMenuItem cm_winXferFn;
     private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JPopupMenu.Separator jSeparator1;
     private javax.swing.JMenu menu_demo;
     private javax.swing.JMenu menu_file;
     private javax.swing.JMenu menu_help;

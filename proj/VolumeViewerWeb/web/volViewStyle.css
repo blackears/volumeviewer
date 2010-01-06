@@ -1,0 +1,103 @@
+/* 
+    Document   : volViewStyle
+    Created on : Jan 6, 2010, 1:43:00 AM
+    Author     : kitfox
+    Description:
+        Purpose of the stylesheet follows.
+*/
+
+/* 
+   TODO customize this sample style
+   Syntax recommendation http://www.w3.org/TR/REC-CSS2/
+*/
+
+body {
+    margin: 0 0 1em 0;
+    padding: 0; /* need for Opera */
+    background: white;
+    color: black;
+    min-width: 610px;
+    font-family: sans-serif;
+}
+
+form { margin: 0; }
+img {
+    border: 0; 
+}
+table {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+td {
+    padding: 0;
+    margin: 0;    
+}
+
+.header {
+    background: #263BD5;
+    font-family: sans-serif;
+    color: white;
+    font-size: 60px;
+    font-weight: bold;
+    font-style: italic;
+    margin: 0; 
+}
+
+.copyright {
+    font-size: small;
+    font-style: italic;
+}
+
+.copyright a {
+    color: white;
+    text-decoration: none;
+    margin-left: 10px;
+}
+
+.main {
+    background: #263BD5;
+    font-family: sans-serif;
+    color: white;
+    width: 100%;
+}
+
+.nav {
+    background: #263BD5;
+    font-family: sans-serif;
+    color: white;
+    /*
+    float: left;
+    width: 150px;
+    */
+    padding: 10px;
+}
+
+.navLeft {
+    background: #A7C4E0;
+    font-family: sans-serif;
+    color: black;
+    /*
+    float: left;
+    width: 150px;
+    */
+    padding: 10px;
+    border-width: 2px;
+    border-style: solid;
+}
+
+.navLeft a {
+    text-decoration: none;
+    color: black;
+}
+
+.content {
+    background: white;
+    color: black;
+    padding: 10px;
+}
+
+
+
+
+

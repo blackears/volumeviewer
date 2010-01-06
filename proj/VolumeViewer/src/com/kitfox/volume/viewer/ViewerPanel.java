@@ -24,10 +24,14 @@ package com.kitfox.volume.viewer;
 
 import com.kitfox.volume.MatrixUtil;
 import com.kitfox.xml.schema.volumeviewer.cubestate.NavigatorType;
+import com.sun.opengl.util.BufferUtil;
 import java.awt.Color;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import javax.media.opengl.DebugGL;
 import javax.media.opengl.GL;
 import javax.media.opengl.GLAutoDrawable;
@@ -59,6 +63,8 @@ public class ViewerPanel extends GLCanvas
 
     final ViewportNavigator nav = new ViewportNavigator();
 
+    ArrayList<GLAction> actionQueue = new ArrayList<GLAction>();
+
     /** Creates new form ViewerPanel */
     public ViewerPanel()
     {
@@ -73,6 +79,11 @@ public class ViewerPanel extends GLCanvas
         nav.addPropertyChangeListener(this);
 
         initComponents();
+    }
+
+    public void postGLAction(GLAction action)
+    {
+        actionQueue.add(action);
     }
 
     public NavigatorType save()
@@ -119,6 +130,16 @@ public class ViewerPanel extends GLCanvas
     public void display(GLAutoDrawable drawable)
     {
         GL gl = drawable.getGL();
+
+        //Run any posted events
+        if (!actionQueue.isEmpty())
+        {
+            for (int i = 0; i < actionQueue.size(); ++i)
+            {
+                actionQueue.get(i).run(drawable);
+            }
+            actionQueue.clear();
+        }
 
 //        {
 //            IntBuffer ibuf = BufferUtil.newIntBuffer(1);
@@ -178,6 +199,36 @@ public class ViewerPanel extends GLCanvas
 
     public void displayChanged(GLAutoDrawable drawable, boolean modeChanged, boolean deviceChanged)
     {
+    }
+
+    public BufferedImage dumpBuffer(GLAutoDrawable drawable)
+    {
+        GL gl = drawable.getGL();
+
+        int width = getWidth();
+        int height = getHeight();
+        ByteBuffer bb = BufferUtil.newByteBuffer(width * height * 4);
+        gl.glReadPixels(0, 0, width, height, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, bb);
+
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        for (int j = 0; j < height; ++j)
+        {
+            for (int i = 0; i < width; ++i)
+            {
+                int r = bb.get() & 0xff;
+                int g = bb.get() & 0xff;
+                int b = bb.get() & 0xff;
+                int a = bb.get() & 0xff;
+
+                int argb = (a << 24)
+                        | (r << 16)
+                        | (g << 8)
+                        | (b << 0);
+
+                img.setRGB(i, height - 1 - j, argb);
+            }
+        }
+        return img;
     }
 
     /** This method is called from within the constructor to

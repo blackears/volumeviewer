@@ -1,0 +1,245 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+    <head>
+        <meta content="text/html; charset=ISO-8859-1" http-equiv="Content-Type">
+        <title>Volume Viewer</title>
+        <link rel="stylesheet" type="text/css" href="volViewStyle.css">
+    </head>
+
+    <body>
+        <table class="nav">
+            <tr>
+                <td>
+                    <a href="index.html" title="Go to volumeviewer.kenai.com" accesskey="1">
+                        <img src="headHeader.png" alt="Volume Viewer Project" align="middle"/></a>
+                </td>
+                <td class="header" align="center" valign="center" width="100%">
+                    Volume Viewer Documentation
+                </td>
+            </tr>
+        </table>
+
+        <table cellpadding="0" cellspacing="0">
+            <tr>
+                <td class="nav" valign="top" width="150px">
+                    <div class="navLeft">
+                        <a href="index.html">Home</a>
+                        <a href="volumeViewerDocs.html">Documentation</a>
+                        <a href="volumeViewerScreenshots.html">Screenshots</a>
+                        <a href="http://kenai.com/projects/volumeviewer">Project</a>
+                    </div>
+                </td>
+                <td class="content" valign="top">
+                    <h3>Main</h3>
+
+                    <table>
+                        <caption align="bottom">Viewer window</caption>
+                        <tr>
+                            <td align="center">
+                                <img src="docs/viewer.png" alt="Viewer"/>
+                            </td>
+                        </tr>
+                    </table>
+
+
+                    <p>Click and drag in the window to tumble the model.
+                        Use the mouse wheel to zoom in and out.</p>
+
+                    <h3>File</h3>
+                    <ul>
+                        <li/>Load...
+                        <ul>Load a saved .vvc file</ul>
+                        <li/>Save...
+                        <ul>Save current layout as a .vvc file.</ul>
+                        <li/>Save Snapshot...
+                        <ul>Save current view as a PNG file.</ul>
+                    </ul>
+
+                    <h3>Demo</h3>
+                    <ul>
+                        <li/>Select any of these to load demo configurations
+                        that demonstrate interesting aspects of the viewer.
+                    </ul>
+
+                    <h3>Window</h3>
+
+                    <h4>Data Source</h4>
+                    <table>
+                        <caption align="bottom">Data Source</caption>
+                        <tr>
+                            <td align="center">
+                                <img src="docs/dataSource.png" alt="Data Source"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <ul>
+                        <li/>URL
+                        <ul><p>A path to a .zip file containing image volume data.
+                        The viewer reads images in the order they are encountered
+                        in the zip file.  Images can be in TIF, PNG, GIF, JPG
+                        or PNM format.</p><p>If you decide to upload your own data,
+                        be careful not to exceede the memory limits of the
+                        application (currently set to a maximum of 1GB).  The demo
+                        datasets fit within a 256x256x128 volume.</p></ul>
+                        <li/>Presets
+                        <ul>Load one of the demo datasets directly from the
+                            server.  Helpful for testing.</ul>
+                    </ul>
+
+                    <h4>Layout</h4>
+                    <table>
+                        <caption align="bottom">Layout</caption>
+                        <tr>
+                            <td align="center">
+                                <img src="docs/layout.png" alt="Layout"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <ul>
+                        <li/>Width
+                        <ul><p>Relative width of displayed volume.</p></ul>
+                        <li/>Height
+                        <ul><p>Relative height of displayed volume.</p></ul>
+                        <li/>Depth
+                        <ul><p>Relative depth of displayed volume.</p></ul>
+                        <li/>Show bounds
+                        <ul><p>Draw bounding box around entire volume.</p></ul>
+                        <li/>Show lightbuffer
+                        <ul><p>When drawing with diffuse light, show the
+                                calculated shadow in the upper right
+                                hand corner.  This is the model seen from
+                                the light's point of view.</p></ul>
+                        <li/>Slices
+                        <ul><p>Number of slices through the data to draw.
+                            Larger values make for more detailed renderings.
+                            Smaller values make the program more responsive.</p></ul>
+                        <li/>Opacity
+                        <ul><p>Adjust the opacity for all pixels in the model.
+                                For best viewing, this should be set to about
+                                the same value as Slices.</p><p>This isn't a simple
+                            multiplier for all density information - instead,
+                            it provide a correction factor so that when you
+                            adjust the number of slices the total overall
+                            opacity of the model does not seem to change.</p></ul>
+                    </ul>
+
+                    <h4>Light</h4>
+                    <table>
+                        <caption align="bottom">Light</caption>
+                        <tr>
+                            <td align="center">
+                                <img src="docs/light.png" alt="Light"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <ul>
+                        <li/>Front/Back
+                        <ul><p>Click and drag to change light direction.</p></ul>
+                        <li/>Color
+                        <ul><p>Light color</p></ul>
+                        <li>Type
+                            <ul>
+                                <li>None - Draw the transfer color with opacity.</li>
+                                <li>Phong - Use light direction to add a shine to parts of the model facing that direction.</li>
+                                <li>Diffuse - Use the calculated shadow buffer to add extra shading information to the rendering.</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+
+                    <h4>Paint</h4>
+                    <table>
+                        <caption align="bottom">Paint Transfer Function</caption>
+                        <tr>
+                            <td align="center">
+                                <img src="docs/transfer.png" alt="Paint"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <ul>
+                        <li/>Histogram
+                        <ul><p>Draw histogram data underneath the painting area.</p>
+                            <p>The histogram provides information about how
+                            the volume data is laid out.  The horizontal axis
+                            represents the density of the volume data.  The
+                            vertical axis represents how likely it is a piece
+                            of the model represents an edge (aka: the local
+                            change in density in math speak).  Pixel brightness
+                            indicates what percentage of the source data maps
+                            to this particular density/edginess coordinate.</p></ul>
+                        <li/>Display opacity
+                        <ul><p>How much of the histogram is obscured by the
+                            transfer function overlay.  This does not affect the
+                            rendering - it just makes painting the transfer
+                            function easier.</p>
+                            <li>Color - Draw using color</li>
+                            <li>Mask - Draw into the opacity of the transfer
+                            function instead of the color.  This makes it
+                            easy to erase sections of the image without
+                            affecting the color.</li>
+                        </ul>
+                        <li/>Brush
+                        <ul>
+                            <li/>Brush
+                            <ul>Draw into the transfer function</ul>
+                            <li/>Eraser
+                            <ul>Erase parts of the transfer function</ul>
+                            <li/>Size
+                            <ul>Set the size of the brush</ul>
+                            <li/>Sharp
+                            <ul>Set the sharpness of the brush</ul>
+                            <li/>Opacity
+                            <ul>Set the opacity of the brush</ul>
+                            <li/>Color
+                            <ul>Set the color of the brush</ul>
+                        </ul>
+                        
+                    </ul>
+
+                    <h4>Clip Sectors</h4>
+                    <table>
+                        <caption align="bottom">Clip Sectors</caption>
+                        <tr>
+                            <td align="center">
+                                <img src="docs/clipSectors.png" alt="Clip Sectors"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <ul>
+                        <li/>Center X/Y/Z
+                        <ul><p>Changes the dividing point for  calculating
+                            the sectors.  By default, all sectors are of
+                            equal size.  By changing these values, you change
+                            the fraction of the volume a sector contains.
+                            For example, by setting Center X to .2, the -X
+                            sectors will only see 20% of the model while the
+                            +X sectors will see the remaining 80%.</p></ul>
+                        <li/>Check Boxes
+                        <ul><p>If checked, indicates the coresponding sector
+                            is visible.</p></ul>
+                        <li/>Speed buttons
+                        <ul><p>Provides a fast way to select common
+                                combinations of sectors.</p></ul>
+                    </ul>
+
+                </td>
+            </tr>
+        </table>
+
+        <table class="nav">
+            <tr>
+                <td class="copyright">
+                    Copyright © 2010, Mark McKay
+                    <a href="http://www.kitfox.com">http://www.kitfox.com</a>
+                </td>
+            </tr>
+        </table>
+
+    </body>
+</html>
+

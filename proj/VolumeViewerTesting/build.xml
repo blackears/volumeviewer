@@ -72,7 +72,7 @@
 
     -->
 
-    <property name="www.dir" location="../../www"/>
+    <property name="www.dir" location="../VolumeViewerWeb/web"/>
     <property name="key.user" value="kitfox"/>
     <property name="key.password" value="anonymous"/>
     <property name="key.location" location="tempKeystore"/>

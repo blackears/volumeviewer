@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+    <head>
+        <meta content="text/html; charset=ISO-8859-1" http-equiv="Content-Type">
+        <title>Volume Viewer</title>
+        <link rel="stylesheet" type="text/css" href="volViewStyle.css">
+    </head>
+
+    <body>
+        <table class="nav">
+            <tr>
+                <td>
+                    <a href="index.html" title="Go to volumeviewer.kenai.com" accesskey="1">
+                        <img src="headHeader.png" alt="Volume Viewer Project" align="middle"/></a>
+                </td>
+                <td class="header" align="center" valign="center" width="100%">
+                    Volume Viewer
+                </td>
+            </tr>
+        </table>
+
+        <table cellpadding="0" cellspacing="0">
+            <tr>
+                <td class="nav" valign="top" width="150px">
+                    <div class="navLeft">
+                        <a href="index.html">Home</a>
+                        <a href="volumeViewerDocs.html">Documentation</a>
+                        <a href="volumeViewerScreenshots.html">Screenshots</a>
+                        <a href="http://kenai.com/projects/volumeviewer">Project</a>
+                    </div>
+                </td>
+                <td class="content" valign="top">
+                    <p>The Volume Viewer makes it easy to see and manipulate
+                    volumetric data in Java.</p>
+
+                    <table>
+                        <caption align="bottom"><a href="volumeViewer.jnlp">Click to run Volume Viewer</a></caption>
+                        <tr>
+                            <td align="center">
+                                <a href="volumeViewer.jnlp"><img src="headshot.png" alt="Demo screenshot"/></a>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <p>
+                        I wrote this because I thought it would be a fun
+                        project and to demonstrate the use of some of
+                        the more advanced OpenGL features.
+                    </p>
+
+
+                    <h3>How it works:</h3>
+                    <!--
+                    <p>The Volume Viewer first must build a volume of data
+                        in memory that describes the object to view.  It
+                        does this by reading a stack of images.  Each
+                        2D image is black-and-white, with the lightness of
+                        each pixel representing the denseness of the
+                        model at that point.  As more images are read,
+                        they're placed one upon the other in a stack.  In
+                        this way, a full 3D volume can be aquired.
+                    </p>
+                    -->
+
+                    <p>
+                        The Volume Viewer gets its data by reading
+                        in a stack of images.  It then generates a stack of
+                        slices that face half way between the viewer
+                        and the light source (this is to allow both the
+                        viewer and the light to have a good view of them).
+                        Next, it renders each slice one at a time from
+                        the one closest to the light to the one furthest
+                        from it.  Each time, it keeps track of the shadow
+                        cast by the previous layer so that it can be
+                        used when drawing the next layer.  When all
+                        planes are drawn, a realistic shadowed image
+                        remains.
+                    </p>
+
+                    <p>
+                        The user can influence the rendering by changing
+                        the color or position of the light, and also by
+                        painting on a 'transfer function' that gives
+                        color to different densities in the model.
+                    </p>
+
+                    <h3>OpenGL Features:</h3>
+                    <ul>
+                        <li/>Shaders
+                        <li/>Frame Buffer Objects
+                        <li/>Vertex Buffer Objects
+                        <li/>Multisampling
+                    </ul>
+
+                    <h3>Special thanks:</h3>
+
+                    <p>This project is based on the algorithm described
+                    in GPU Gems, Chapter 39.</p>
+
+                    <p>The datasets used in the demo program are taken from
+                    the <a href="http://graphics.stanford.edu/data/voldata/">Stanford volume data archive</a>.</p>
+
+                    <br/>
+                </td>
+            </tr>
+        </table>
+
+        <table class="nav">
+            <tr>
+                <td class="copyright">
+                    Copyright © 2010, Mark McKay
+                    <a href="http://www.kitfox.com">http://www.kitfox.com</a>
+                </td>
+            </tr>
+        </table>
+
+    </body>
+</html>
+
