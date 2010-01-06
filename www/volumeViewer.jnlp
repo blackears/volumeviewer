@@ -2,7 +2,7 @@
 <!--
 <jnlp codebase="file:C:\dev\dev.java.net\volumeviewer\www" href="launch.jnlp" spec="1.0+">
 -->
-<jnlp codebase="https://volumeviewer.kenai.com" href="launch.jnlp" spec="1.0+">
+<jnlp codebase="http://volumeviewer.kenai.com" href="volumeViewer.jnlp" spec="1.0+">
     <information>
         <title>Volume Viewer</title>
         <vendor>kitfox</vendor>
@@ -30,6 +30,6 @@
     </resources>
 
     <application-desc 
-    	main-class="com.kitfox.volume.test.TestFrame">
+    	main-class="com.kitfox.volume.test.VolViewWebstartFrame">
     </application-desc>
 </jnlp>

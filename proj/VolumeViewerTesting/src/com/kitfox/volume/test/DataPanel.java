@@ -231,11 +231,21 @@ public class DataPanel extends javax.swing.JPanel
     }//GEN-LAST:event_text_urlFocusLost
 
     private void bn_head1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bn_head1ActionPerformed
-        dataSource.setDataSource(DataPanel.class.getResource("/mrbrain-8bit.zip"));
+        //dataSource.setDataSource(DataPanel.class.getResource("/mrbrain-8bit.zip"));
+        try {
+            dataSource.setDataSource(new URL("http://volumeviewer.kenai.com/mrbrain-8bit.zip"));
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(DataPanel.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }//GEN-LAST:event_bn_head1ActionPerformed
 
     private void bn_head2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bn_head2ActionPerformed
-        dataSource.setDataSource(DataPanel.class.getResource("/cthead-8bit.zip"));
+        //dataSource.setDataSource(DataPanel.class.getResource("/cthead-8bit.zip"));
+        try {
+            dataSource.setDataSource(new URL("http://volumeviewer.kenai.com/cthead-8bit.zip"));
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(DataPanel.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }//GEN-LAST:event_bn_head2ActionPerformed
 
 

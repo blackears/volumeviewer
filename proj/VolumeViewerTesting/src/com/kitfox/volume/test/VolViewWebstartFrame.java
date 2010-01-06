@@ -38,16 +38,20 @@ import com.kitfox.xml.schema.volumeviewer.savefile.VolumeViewerConfigType;
 import com.kitfox.xml.schema.volumeviewer.savefile.WindowLayoutType;
 import java.awt.BorderLayout;
 import java.awt.Desktop;
+import java.awt.event.ActionEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.AbstractAction;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JPopupMenu;
@@ -63,8 +67,7 @@ import javax.xml.transform.stream.StreamSource;
  *
  * @author kitfox
  */
-@Deprecated
-public class TestFrame extends javax.swing.JFrame
+public class VolViewWebstartFrame extends javax.swing.JFrame
 {
     private static final long serialVersionUID = 0;
 
@@ -86,6 +89,24 @@ public class TestFrame extends javax.swing.JFrame
         fileChooser.setCurrentDirectory(new File("."));
     }
 
+    class DemoAction extends AbstractAction
+    {
+        private static final long serialVersionUID = 0;
+
+        final URL url;
+
+        DemoAction(String name, URL url)
+        {
+            super(name);
+            this.url = url;
+        }
+
+        public void actionPerformed(ActionEvent e)
+        {
+            load(url);
+        }
+    }
+
     class DataLoader implements PropertyChangeListener
     {
         public void propertyChange(PropertyChangeEvent evt)
@@ -100,7 +121,7 @@ public class TestFrame extends javax.swing.JFrame
 
                 xferPanel.setVolumeData(data);
             } catch (IOException ex) {
-                Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(VolViewWebstartFrame.class.getName()).log(Level.SEVERE, null, ex);
             }
 
         }
@@ -131,14 +152,29 @@ public class TestFrame extends javax.swing.JFrame
 
 
     /** Creates new form TestFrame */
-    public TestFrame()
+    public VolViewWebstartFrame()
     {
         initComponents();
 
+        menu_demo.add(new DemoAction("Head Edges",
+                VolViewWebstartFrame.class.getResource("/headEdges.vvc")));
+        menu_demo.add(new DemoAction("Head Organs",
+                VolViewWebstartFrame.class.getResource("/headOrgans.vvc")));
+        menu_demo.add(new DemoAction("Hollow Side View",
+                VolViewWebstartFrame.class.getResource("/hollowSideView.vvc")));
+        menu_demo.add(new DemoAction("Sectioned View",
+                VolViewWebstartFrame.class.getResource("/sectionedView.vvc")));
+        menu_demo.add(new DemoAction("Clear Head",
+                VolViewWebstartFrame.class.getResource("/clearHead.vvc")));
+        menu_demo.add(new DemoAction("Skull",
+                VolViewWebstartFrame.class.getResource("/skull.vvc")));
+        menu_demo.add(new DemoAction("Cut Skull",
+                VolViewWebstartFrame.class.getResource("/cutSkull.vvc")));
+
+
         URI uri = null;
         try {
-//            uri = new URI("https://volumeviewer.dev.java.net/");
-            uri = new URI("http://volumeviewer.kenai.com/");
+            uri = new URI("http://volumeviewer.kenai.com");
         } catch (URISyntaxException ex) {
             Logger.getLogger(AboutPanel.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -157,9 +193,27 @@ public class TestFrame extends javax.swing.JFrame
         buildWindows();
 
         setSize(640, 480);
-        
 
-        dataSource.setDataSource(TestFrame.class.getResource("/mrbrain-8bit.zip"));
+//        dataSource.setDataSource(VolViewWebstartFrame.class.getResource("/mrbrain-8bit.zip"));
+
+        File file = new File("../../www/mrbrain-8bit.zip");
+
+        if (file.exists())
+        {
+            //For local testing only
+            try
+            {
+                URL url = file.toURI().toURL();
+                dataSource.setDataSource(url);
+            } catch (MalformedURLException ex) {
+                Logger.getLogger(VolViewWebstartFrame.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        else
+        {
+            //By default, load one of the demos
+            load(VolViewWebstartFrame.class.getResource("/headEdges.vvc"));
+        }
     }
 
     private void buildWindows()
@@ -372,24 +426,10 @@ public class TestFrame extends javax.swing.JFrame
             return;
         }
 
-        //Import
         try {
-            FileReader reader = new FileReader(file);
-            JAXBContext context = JAXBContext.newInstance(
-                    CubeType.class, NavigatorType.class, VolumeViewerConfigType.class);
-            StreamSource source = new StreamSource(reader);
-            Unmarshaller unmarshaller = context.createUnmarshaller();
-
-            JAXBElement<VolumeViewerConfigType> ele =
-                    unmarshaller.unmarshal(source, VolumeViewerConfigType.class);
-
-            load(ele.getValue());
-
-            System.err.println("Loaded config file " + file.getAbsolutePath());
-        } catch (JAXBException ex) {
-            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+            load(file.toURI().toURL());
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(VolViewWebstartFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }//GEN-LAST:event_cm_fileLoadActionPerformed
@@ -425,12 +465,33 @@ public class TestFrame extends javax.swing.JFrame
 
             System.err.println("Saved config file " + file.getAbsolutePath());
         } catch (JAXBException ex) {
-            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(VolViewWebstartFrame.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            Logger.getLogger(TestFrame.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(VolViewWebstartFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }//GEN-LAST:event_cm_fileSaveActionPerformed
+
+    private void load(URL url)
+    {
+        try {
+            JAXBContext context = JAXBContext.newInstance(
+                    CubeType.class, NavigatorType.class, VolumeViewerConfigType.class);
+            StreamSource source = new StreamSource(url.openStream());
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+
+            JAXBElement<VolumeViewerConfigType> ele =
+                    unmarshaller.unmarshal(source, VolumeViewerConfigType.class);
+
+            load(ele.getValue());
+
+            System.err.println("Loaded config file " + url.toExternalForm());
+        } catch (JAXBException ex) {
+            Logger.getLogger(VolViewWebstartFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(VolViewWebstartFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
     private void load(VolumeViewerConfigType conf)
     {
@@ -514,7 +575,7 @@ public class TestFrame extends javax.swing.JFrame
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new TestFrame().setVisible(true);
+                new VolViewWebstartFrame().setVisible(true);
             }
         });
     }

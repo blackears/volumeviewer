@@ -36,7 +36,7 @@ public class AboutPanel extends javax.swing.JPanel
 
         URI uri = null;
         try {
-            uri = new URI("https://volumeviewer.dev.java.net/");
+            uri = new URI("http://volumeviewer.kenai.com");
         } catch (URISyntaxException ex) {
             Logger.getLogger(AboutPanel.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -58,7 +58,7 @@ public class AboutPanel extends javax.swing.JPanel
         jPanel1 = new javax.swing.JPanel();
         bn_ok = new javax.swing.JButton();
 
-        jLabel1.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
+        jLabel1.setFont(new java.awt.Font("Tahoma", 0, 18));
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel1.setText("Volume Viewer");
 
@@ -66,7 +66,7 @@ public class AboutPanel extends javax.swing.JPanel
         jLabel2.setText("Copyright © 2010 Mark McKay");
 
         label_homepage.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        label_homepage.setText("<html><a href=\"https://volumeviewer.dev.java.net\">https://volumeviewer.dev.java.net</a></html>");
+        label_homepage.setText("<html><a href=\"http://volumeviewer.kenai.com\">http://volumeviewer.kenai.com</a></html>");
         label_homepage.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         label_homepage.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
