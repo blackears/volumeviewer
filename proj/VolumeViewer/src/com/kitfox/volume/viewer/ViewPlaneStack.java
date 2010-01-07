@@ -188,6 +188,18 @@ public class ViewPlaneStack
         public void endSlice(GLAutoDrawable drawable, int iteration);
     }
 
+    public static final SliceTracker NULL_SLICE_TRACKER
+            = new SliceTracker()
+    {
+        public void startSlice(GLAutoDrawable drawable, int iteration)
+        {
+        }
+
+        public void endSlice(GLAutoDrawable drawable, int iteration)
+        {
+        }
+    };
+
     public void render(GLAutoDrawable drawable, int numIterations, SliceTracker callback)
     {
         GL gl = drawable.getGL();

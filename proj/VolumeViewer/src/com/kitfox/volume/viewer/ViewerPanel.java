@@ -30,6 +30,8 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import javax.media.opengl.DebugGL;
@@ -38,6 +40,7 @@ import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCanvas;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLEventListener;
+import javax.swing.JOptionPane;
 import javax.swing.event.ChangeEvent;
 import javax.vecmath.Matrix4f;
 
@@ -112,6 +115,9 @@ public class ViewerPanel extends GLCanvas
     {
         //Debug
         drawable.setGL(new DebugGL(drawable.getGL()));
+
+        GLExtensions.update(drawable);
+        checkExtensions();
 
         GL gl = drawable.getGL();
         System.err.println("Initializing GL Thread");
@@ -227,6 +233,37 @@ public class ViewerPanel extends GLCanvas
             }
         }
         return img;
+    }
+
+    private void checkExtensions()
+    {
+        boolean ms = GLExtensions.inst().isMultisampleOk();
+        boolean sh = GLExtensions.inst().isShaderOk();
+        boolean sl = GLExtensions.inst().isShadowLightOk();
+
+        if (ms && sh && sl)
+        {
+            //All ok
+            return;
+        }
+
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        if (!ms)
+        {
+            pw.println("Graphics card does not support multisampling.  Feature disabled.");
+        }
+        if (!sh)
+        {
+            pw.println("Graphics card does not support shaders.  Feature disabled.");
+        }
+        if (!sl)
+        {
+            pw.println("Graphics card does not support frame buffer objects.  Feature disabled.");
+        }
+        pw.close();
+
+        JOptionPane.showMessageDialog(this, sw.toString(), "Some features could not be created", JOptionPane.WARNING_MESSAGE);
     }
 
     /** This method is called from within the constructor to

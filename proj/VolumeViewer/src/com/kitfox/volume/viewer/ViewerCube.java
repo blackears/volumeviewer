@@ -393,7 +393,7 @@ public class ViewerCube
 
         setupViewerCamera(gl);
 
-        if (multisampled)
+        if (multisampled && GLExtensions.inst().isMultisampleOk())
         {
             gl.glEnable(GL.GL_MULTISAMPLE);
             gl.glEnable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
@@ -409,8 +409,61 @@ public class ViewerCube
             gl.glPopMatrix();
         }
 
-        if (data != null)
+        if (!GLExtensions.inst().isShaderOk())
         {
+            drawAlphaOnly(drawable);
+        }
+        else
+        {
+            drawShaded(drawable);
+        }
+
+        if (multisampled && GLExtensions.inst().isMultisampleOk())
+        {
+            gl.glDisable(GL.GL_MULTISAMPLE);
+            gl.glDisable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
+        }
+    }
+
+    private void drawAlphaOnly(GLAutoDrawable drawable)
+    {
+        GL gl = drawable.getGL();
+
+        if (data == null)
+        {
+            return;
+        }
+
+        gl.glEnable(GL.GL_BLEND);
+        gl.glEnable(GL.GL_TEXTURE_3D);
+        gl.glTexEnvf(GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_REPLACE);
+
+        gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+
+        gl.glActiveTexture(GL.GL_TEXTURE0);
+        data.bindTexture3d(drawable);
+
+        gl.glColor3f(lightColor.x, lightColor.y, lightColor.z);
+
+        planes.setBoxRadius(volumeRadius);
+
+        Vector3f dir = getViewerDirCube();
+        dir.negate();
+        planes.setNormal(dir);
+        planes.render(drawable, 1, ViewPlaneStack.NULL_SLICE_TRACKER);
+
+        gl.glDisable(GL.GL_TEXTURE_3D);
+        gl.glDisable(GL.GL_BLEND);
+    }
+
+    private void drawShaded(GLAutoDrawable drawable)
+    {
+        GL gl = drawable.getGL();
+
+        if (data == null)
+        {
+            return;
+        }
 //            {
 //                gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_LINE);
 //                planes.setBoxRadius(volumeRadius);
@@ -418,47 +471,49 @@ public class ViewerCube
 //                planes.render(drawable, 1, this);
 //                gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_FILL);
 //            }
+        if (GLExtensions.inst().isShadowLightOk())
+        {
             lightBuffer.clear(drawable, lightColor);
+        }
 
-            gl.glActiveTexture(GL.GL_TEXTURE0);
-            data.bindTexture3d(drawable);
-            shader.setTexVolumeId(0);
+        gl.glActiveTexture(GL.GL_TEXTURE0);
+        data.bindTexture3d(drawable);
+        shader.setTexVolumeId(0);
 
-            gl.glActiveTexture(GL.GL_TEXTURE1);
-            data.bindTextureXfer(drawable);
-            shader.setTexXferId(1);
+        gl.glActiveTexture(GL.GL_TEXTURE1);
+        data.bindTextureXfer(drawable);
+        shader.setTexXferId(1);
 
+        if (GLExtensions.inst().isShadowLightOk())
+        {
             gl.glActiveTexture(GL.GL_TEXTURE2);
             lightBuffer.bindLightTexture(drawable);
             shader.setTexLightMapId(2);
-
-            gl.glActiveTexture(GL.GL_TEXTURE3);
-            sectorMask.bindTexture(drawable);
-            shader.setTexOctantMask(3);
-
-            shader.setOctantCenter(sectorMask.getCenter());
-            
-//            shader.setLightingStyle(lightingStyle);
-            shader.setLightMvp(getLightMvpMtx());
-            shader.setLightColor(lightColor);
-//            shader.setLightDir(lightDir);
-//            shader.setViewDir(new Vector3f(0, 0, 1));
-            shader.setLightDir(getLightDirCube());
-            shader.setViewDir(getViewerDirCube());
-            shader.setOpacityCorrect(opacityReference / planes.getNumPlanes());
-
-
-            planes.setBoxRadius(volumeRadius);
-            planes.setNormal(getPlaneNormal());
-            planes.render(drawable, lightingStyle.getNumPasses(), this);
-//System.err.println("Ftb: " + frontToBack);
-
-            gl.glActiveTexture(GL.GL_TEXTURE0);
         }
-//        lightBuffer.dumpLightTexture(drawable);
+
+        gl.glActiveTexture(GL.GL_TEXTURE3);
+        sectorMask.bindTexture(drawable);
+        shader.setTexOctantMask(3);
+
+        shader.setOctantCenter(sectorMask.getCenter());
+
+        shader.setLightMvp(getLightMvpMtx());
+        shader.setLightColor(lightColor);
+        shader.setLightDir(getLightDirCube());
+        shader.setViewDir(getViewerDirCube());
+        shader.setOpacityCorrect(opacityReference / planes.getNumPlanes());
+
+
+        planes.setBoxRadius(volumeRadius);
+        planes.setNormal(getPlaneNormal());
+        planes.render(drawable, lightingStyle.getNumPasses(), this);
+
+        gl.glActiveTexture(GL.GL_TEXTURE0);
+        
 
         //Display light buffer
-        if (drawLightbuffer && lightingStyle == LightingStyle.DIFFUSE)
+        if (drawLightbuffer 
+                && resolveLightingStyle() == LightingStyle.DIFFUSE)
         {
 //            lightBuffer.dumpLightTexture(drawable);
 
@@ -493,19 +548,24 @@ public class ViewerCube
             gl.glDisable(GL.GL_TEXTURE_RECTANGLE_EXT);
             gl.glDisable(GL.GL_BLEND);
         }
-        
-        if (multisampled)
-        {
-            gl.glDisable(GL.GL_MULTISAMPLE);
-            gl.glDisable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
-        }
 
+    }
+
+    private LightingStyle resolveLightingStyle()
+    {
+        LightingStyle style = lightingStyle;
+        if (!GLExtensions.inst().isShadowLightOk()
+                && style == LightingStyle.DIFFUSE)
+        {
+            return LightingStyle.NONE;
+        }
+        return style;
     }
 
     FloatBuffer bufferMtx = BufferUtil.newFloatBuffer(16);
     public void startSlice(GLAutoDrawable drawable, int iteration)
     {
-        switch (lightingStyle)
+        switch (resolveLightingStyle())
         {
             case NONE:
                 shader.setPassType(PassType.COLOR);
@@ -540,7 +600,7 @@ public class ViewerCube
 
     public void endSlice(GLAutoDrawable drawable, int iteration)
     {
-        switch (lightingStyle)
+        switch (resolveLightingStyle())
         {
             case NONE:
             case PHONG:
