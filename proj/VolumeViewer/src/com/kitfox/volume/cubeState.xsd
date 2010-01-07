@@ -16,7 +16,7 @@
             <xsd:element name="drawWireframe" type="xsd:boolean" default="true"></xsd:element>
             <xsd:element name="drawLightbuffer" type="xsd:boolean" default="true"></xsd:element>
             <xsd:element name="transfer" type="tns:transferType"></xsd:element>
-            <xsd:element name="multisampled" type="xsd:boolean"></xsd:element>
+            <xsd:element name="multisampled" type="xsd:boolean" default="false"></xsd:element>
         </xsd:sequence>
     </xsd:complexType>
     <xsd:complexType name="vectorType">
