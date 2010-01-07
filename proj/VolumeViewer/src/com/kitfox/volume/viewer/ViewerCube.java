@@ -91,6 +91,8 @@ public class ViewerCube
     public static final String PROP_DRAWWIREFRAME = "drawWireframe";
     protected boolean drawLightbuffer = true;
     public static final String PROP_DRAWLIGHTBUFFER = "drawLightbuffer";
+    protected boolean multisampled;
+    public static final String PROP_MULTISAMPLED = "multisampled";
 
     protected LightingStyle lightingStyle = LightingStyle.NONE;
     public static final String PROP_LIGHTINGSTYLE = "lightingStyle";
@@ -137,6 +139,7 @@ public class ViewerCube
 
     public void load(CubeType target)
     {
+        setMultisampled(target.isMultisampled());
         setDrawLightbuffer(target.isDrawLightbuffer());
         setDrawWireframe(target.isDrawWireframe());
         setLightColor(asColor3f(target.getLightColor()));
@@ -154,6 +157,7 @@ public class ViewerCube
     {
         CubeType target = new CubeType();
 
+        target.setMultisampled(multisampled);
         target.setDrawLightbuffer(drawLightbuffer);
         target.setDrawWireframe(drawWireframe);
         target.setLightColor(asVectorType(lightColor));
@@ -389,6 +393,12 @@ public class ViewerCube
 
         setupViewerCamera(gl);
 
+        if (multisampled)
+        {
+            gl.glEnable(GL.GL_MULTISAMPLE);
+            gl.glEnable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
+        }
+
         //Draw bounds
         if (drawWireframe)
         {
@@ -484,6 +494,12 @@ public class ViewerCube
             gl.glDisable(GL.GL_BLEND);
         }
         
+        if (multisampled)
+        {
+            gl.glDisable(GL.GL_MULTISAMPLE);
+            gl.glDisable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
+        }
+
     }
 
     FloatBuffer bufferMtx = BufferUtil.newFloatBuffer(16);
@@ -814,6 +830,26 @@ public class ViewerCube
     public SectorMask getOctantMask()
     {
         return sectorMask;
+    }
+
+    /**
+     * Get the value of multisampled
+     *
+     * @return the value of multisampled
+     */
+    public boolean isMultisampled() {
+        return multisampled;
+    }
+
+    /**
+     * Set the value of multisampled
+     *
+     * @param multisampled new value of multisampled
+     */
+    public void setMultisampled(boolean multisampled) {
+        boolean oldMultisampled = this.multisampled;
+        this.multisampled = multisampled;
+        propertyChangeSupport.firePropertyChange(PROP_MULTISAMPLED, oldMultisampled, multisampled);
     }
 
 }

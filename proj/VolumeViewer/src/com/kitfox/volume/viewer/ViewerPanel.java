@@ -163,7 +163,6 @@ public class ViewerPanel extends GLCanvas
             gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT | GL.GL_STENCIL_BUFFER_BIT);
 //            gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 
-            gl.glEnable(GL.GL_MULTISAMPLE);
 
             //Draw view cube
             ViewerCube curCube = cube;
@@ -173,7 +172,6 @@ public class ViewerPanel extends GLCanvas
                 curCube.render(drawable);
             }
 
-            gl.glDisable(GL.GL_MULTISAMPLE);
         }
 
     }

@@ -43,6 +43,8 @@
                       <Component id="check_showBounds" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="check_showLightbuffer" min="-2" max="-2" attributes="0"/>
+                      <EmptySpace max="-2" attributes="0"/>
+                      <Component id="check_multisample" min="-2" max="-2" attributes="0"/>
                   </Group>
                   <Group type="102" alignment="0" attributes="0">
                       <Group type="103" groupAlignment="0" attributes="0">
@@ -82,6 +84,7 @@
               <Group type="103" groupAlignment="3" attributes="0">
                   <Component id="check_showBounds" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="check_showLightbuffer" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="check_multisample" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
@@ -189,6 +192,14 @@
       </Properties>
       <Events>
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="check_showLightbufferActionPerformed"/>
+      </Events>
+    </Component>
+    <Component class="javax.swing.JCheckBox" name="check_multisample">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="Multisample"/>
+      </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="check_multisampleActionPerformed"/>
       </Events>
     </Component>
   </SubComponents>

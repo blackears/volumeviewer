@@ -92,6 +92,7 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
         slider_opacity = new javax.swing.JSlider();
         jLabel5 = new javax.swing.JLabel();
         check_showLightbuffer = new javax.swing.JCheckBox();
+        check_multisample = new javax.swing.JCheckBox();
 
         jLabel1.setText("Slices");
 
@@ -163,6 +164,13 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
             }
         });
 
+        check_multisample.setText("Multisample");
+        check_multisample.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                check_multisampleActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -187,7 +195,9 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(check_showBounds)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(check_showLightbuffer))
+                        .addComponent(check_showLightbuffer)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(check_multisample))
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel1)
@@ -216,7 +226,8 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(check_showBounds)
-                    .addComponent(check_showLightbuffer))
+                    .addComponent(check_showLightbuffer)
+                    .addComponent(check_multisample))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel1)
@@ -291,6 +302,14 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
         cube.setDrawLightbuffer(check_showLightbuffer.isSelected());
     }//GEN-LAST:event_check_showLightbufferActionPerformed
 
+    private void check_multisampleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_check_multisampleActionPerformed
+        if (updating)
+        {
+            return;
+        }
+        cube.setMultisampled(check_multisample.isSelected());
+    }//GEN-LAST:event_check_multisampleActionPerformed
+
     /**
      * Get the value of cube
      *
@@ -322,6 +341,7 @@ public class VolumeLayoutPanel extends javax.swing.JPanel
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JCheckBox check_multisample;
     private javax.swing.JCheckBox check_showBounds;
     private javax.swing.JCheckBox check_showLightbuffer;
     private javax.swing.JLabel jLabel1;
