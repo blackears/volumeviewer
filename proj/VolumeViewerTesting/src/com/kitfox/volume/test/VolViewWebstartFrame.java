@@ -40,6 +40,7 @@ import com.kitfox.xml.schema.volumeviewer.savefile.WindowLayoutType;
 import java.awt.BorderLayout;
 import java.awt.Desktop;
 import java.awt.event.ActionEvent;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
@@ -55,6 +56,7 @@ import javax.swing.AbstractAction;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JPopupMenu;
+import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileFilter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -125,16 +127,29 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
         }
     }
 
-    class DataLoader implements PropertyChangeListener
+    class DataLoader extends SwingWorker<Object, Object>
     {
-        public void propertyChange(PropertyChangeEvent evt)
+        final JDialog dlg;
+
+        public DataLoader(JDialog dlg)
         {
+            this.dlg = dlg;
+        }
+
+        @Override
+        protected Object doInBackground() throws Exception
+        {
+            dlg.setVisible(true);
+
             try {
                 DataSamplerImage tex = ZipDataLoader.createSampler(dataSource.getDataSource());
                 System.err.println("Loaded images");
                 VolumeData data =
                         new VolumeData(tex.getxSpan(), tex.getySpan(), tex.getzSpan(), tex);
                 System.err.println("Sampled data");
+
+                BufferedImage img = cube.getData().getTransferFunction();
+                data.setTransferFunction(img);
                 cube.setData(data);
 
                 xferPanel.setVolumeData(data);
@@ -142,9 +157,26 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
                 Logger.getLogger(VolViewWebstartFrame.class.getName()).log(Level.SEVERE, null, ex);
             }
 
+            dlg.setVisible(false);
+            dlg.dispose();
+            return null;
         }
     }
-    DataLoader loader = new DataLoader();
+
+    class DataSourceListener implements PropertyChangeListener
+    {
+        public void propertyChange(PropertyChangeEvent evt)
+        {
+            JDialog dlg = new JDialog(VolViewWebstartFrame.this, false);
+            dlg.getContentPane().add(new LoadPanel(), BorderLayout.CENTER);
+            dlg.setAlwaysOnTop(true);
+            dlg.pack();
+
+            new DataLoader(dlg).execute();
+
+        }
+    }
+    DataSourceListener loader = new DataSourceListener();
     DataSource dataSource = new DataSource();
 
     JDialog dlgDataSourcePanel = new JDialog();
@@ -304,6 +336,7 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
         cm_helpAbout = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Volume Viewer");
 
         menu_file.setText("File");
 

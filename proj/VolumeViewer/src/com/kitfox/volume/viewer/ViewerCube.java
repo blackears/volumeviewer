@@ -102,7 +102,7 @@ public class ViewerCube
     protected Matrix4f viewerProjMtx = new Matrix4f();
     public static final String PROP_VIEWERPROJMTX = "viewerProjMtx";
 
-    protected VolumeData data;
+    protected VolumeData data = new VolumeData();
     public static final String PROP_DATA = "data";
 
     //Cached data calculated from the above

@@ -41,6 +41,30 @@ import javax.swing.event.ChangeEvent;
  */
 public class VolumeData
 {
+    static class EmptyDataSampler extends DataSampler
+    {
+
+        @Override
+        public float getValue(float x, float y, float z) {
+            return 1;
+        }
+
+        @Override
+        public float getDx(float x, float y, float z) {
+            return 0;
+        }
+
+        @Override
+        public float getDy(float x, float y, float z) {
+            return 0;
+        }
+
+        @Override
+        public float getDz(float x, float y, float z) {
+            return 0;
+        }
+    };
+
     final int xSpan;
     final int ySpan;
     final int zSpan;
@@ -57,6 +81,11 @@ public class VolumeData
     boolean textureDirtyXfer = true;
 
     ArrayList<DataChangeListener> listeners = new ArrayList<DataChangeListener>();
+
+    public VolumeData()
+    {
+        this(1, 1, 1, new EmptyDataSampler());
+    }
 
     public VolumeData(int xSpan, int ySpan, int zSpan, DataSampler sampler)
     {
@@ -302,9 +331,16 @@ public class VolumeData
     public BufferedImage getTransferFunction()
     {
         BufferedImage ret = createXferImage();
-        Graphics2D g = ret.createGraphics();
-        g.drawImage(ret, transferFunction.getWidth(), transferFunction.getHeight(), null);
-        g.dispose();
+
+        for (int j = 0; j < transferFunction.getHeight(); ++j)
+        {
+            for (int i = 0; i < transferFunction.getWidth(); ++i)
+            {
+                int rgba = transferFunction.getRGB(i, j);
+                ret.setRGB(i, j, rgba);
+            }
+        }
+
         return ret;
     }
 

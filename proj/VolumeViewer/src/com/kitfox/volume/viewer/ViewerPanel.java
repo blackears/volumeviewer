@@ -293,6 +293,11 @@ public class ViewerPanel extends GLCanvas
                 formMouseDragged(evt);
             }
         });
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentShown(java.awt.event.ComponentEvent evt) {
+                formComponentShown(evt);
+            }
+        });
     }// </editor-fold>//GEN-END:initComponents
 
     MouseEvent oldMouse;
@@ -330,6 +335,10 @@ public class ViewerPanel extends GLCanvas
         nav.setViewerRadius(newRad);
         repaint();
     }//GEN-LAST:event_formMouseWheelMoved
+
+    private void formComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_formComponentShown
+        repaint();
+    }//GEN-LAST:event_formComponentShown
 
     /**
      * @return the maxUserRadius
