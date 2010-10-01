@@ -396,7 +396,8 @@ public class ViewerCube
         if (multisampled && GLExtensions.inst().isMultisampleOk())
         {
             gl.glEnable(GL.GL_MULTISAMPLE);
-            gl.glEnable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
+//            gl.glEnable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
+//            gl.glEnable(GL.GL_SAMPLE_ALPHA_TO_ONE);
         }
 
         //Draw bounds
@@ -421,7 +422,8 @@ public class ViewerCube
         if (multisampled && GLExtensions.inst().isMultisampleOk())
         {
             gl.glDisable(GL.GL_MULTISAMPLE);
-            gl.glDisable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
+//            gl.glDisable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
+//            gl.glDisable(GL.GL_SAMPLE_ALPHA_TO_ONE);
         }
     }
 
