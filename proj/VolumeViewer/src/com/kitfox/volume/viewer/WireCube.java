@@ -19,10 +19,11 @@
 
 package com.kitfox.volume.viewer;
 
-import com.sun.opengl.util.BufferUtil;
+import com.jogamp.opengl.util.GLBuffers;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 
 /**
@@ -48,7 +49,7 @@ public class WireCube
 
         };
 
-        FloatBuffer buf = BufferUtil.newFloatBuffer(faceVerts.length);
+        FloatBuffer buf = GLBuffers.newDirectFloatBuffer(faceVerts.length);
         buf.put(faceVerts);
         buf.rewind();
         return buf;
@@ -73,7 +74,7 @@ public class WireCube
             6, 7,
         };
 
-        IntBuffer buf = BufferUtil.newIntBuffer(indices.length);
+        IntBuffer buf = GLBuffers.newDirectIntBuffer(indices.length);
         buf.put(indices);
         buf.rewind();
         return buf;
@@ -82,24 +83,28 @@ public class WireCube
     private void initVBO(GLAutoDrawable drawable)
     {
         GL gl = drawable.getGL();
-        IntBuffer ibuf = BufferUtil.newIntBuffer(2);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(2);
 
         gl.glGenBuffers(2, ibuf);
         wireIndexId = ibuf.get(0);
         wirePointId = ibuf.get(1);
 
         {
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, wirePointId);
+            gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, wirePointId);
             FloatBuffer arrayBuf = createWireframeVertices();
-            gl.glBufferData(GL.GL_ARRAY_BUFFER, arrayBuf.limit() * BufferUtil.SIZEOF_FLOAT, arrayBuf, GL.GL_STATIC_DRAW);
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
+            gl.glBufferData(GL2.GL_ARRAY_BUFFER, 
+                    arrayBuf.limit() * GLBuffers.SIZEOF_FLOAT, 
+                    arrayBuf, GL2.GL_STATIC_DRAW);
+            gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, 0);
         }
 
         {
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, wireIndexId);
+            gl.glBindBuffer(GL2.GL_ELEMENT_ARRAY_BUFFER, wireIndexId);
             IntBuffer arrayBuf = createWireframeIndices();
-            gl.glBufferData(GL.GL_ELEMENT_ARRAY_BUFFER, arrayBuf.limit() * BufferUtil.SIZEOF_INT, arrayBuf, GL.GL_STATIC_DRAW);
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
+            gl.glBufferData(GL2.GL_ELEMENT_ARRAY_BUFFER, 
+                    arrayBuf.limit() * GLBuffers.SIZEOF_INT, 
+                    arrayBuf, GL2.GL_STATIC_DRAW);
+            gl.glBindBuffer(GL2.GL_ELEMENT_ARRAY_BUFFER, 0);
         }
     }
 
@@ -110,23 +115,23 @@ public class WireCube
             initVBO(drawable);
         }
 
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, wirePointId);
+        gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, wirePointId);
 //        gl.glEnableVertexAttribArray(0);
-//        gl.glVertexAttribPointer(0, 3, GL.GL_FLOAT, false, 0, 0);
-//        gl.glVertexAttribPointer(0, 3, GL.GL_FLOAT, false, 3 * BufferUtil.SIZEOF_FLOAT, 0);
-        gl.glEnableClientState(GL.GL_VERTEX_ARRAY);
-        gl.glVertexPointer(3, GL.GL_FLOAT, 0, 0);
-        gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, wireIndexId);
+//        gl.glVertexAttribPointer(0, 3, GL2.GL_FLOAT, false, 0, 0);
+//        gl.glVertexAttribPointer(0, 3, GL2.GL_FLOAT, false, 3 * BufferUtil.SIZEOF_FLOAT, 0);
+        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+        gl.glVertexPointer(3, GL2.GL_FLOAT, 0, 0);
+        gl.glBindBuffer(GL2.GL_ELEMENT_ARRAY_BUFFER, wireIndexId);
 
-        gl.glDrawElements(GL.GL_LINES, 24, GL.GL_UNSIGNED_INT, 0);
+        gl.glDrawElements(GL2.GL_LINES, 24, GL2.GL_UNSIGNED_INT, 0);
 
 //        gl.glDisableVertexAttribArray(0);
-//        gl.glVertexAttribPointer(0, 4, GL.GL_FLOAT, false, 0, 0);
-        gl.glDisableClientState(GL.GL_VERTEX_ARRAY);
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-        gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
+//        gl.glVertexAttribPointer(0, 4, GL2.GL_FLOAT, false, 0, 0);
+        gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
+        gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, 0);
+        gl.glBindBuffer(GL2.GL_ELEMENT_ARRAY_BUFFER, 0);
         
     }
 
@@ -137,7 +142,7 @@ public class WireCube
             return;
         }
 
-        IntBuffer ibuf = BufferUtil.newIntBuffer(2);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(2);
         ibuf.put(0, wireIndexId);
         ibuf.put(1, wirePointId);
 

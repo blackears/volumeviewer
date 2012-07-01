@@ -5,15 +5,16 @@
 
 package com.kitfox.volume.mask;
 
-import static com.kitfox.volume.JAXBHelper.*;
-
+import com.jogamp.opengl.util.GLBuffers;
+import static com.kitfox.volume.JAXBHelper.asVec3f;
+import static com.kitfox.volume.JAXBHelper.asVectorType;
 import com.kitfox.xml.schema.volumeviewer.cubestate.SectorMaskType;
-import com.sun.opengl.util.BufferUtil;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.vecmath.Vector3f;
 
@@ -60,12 +61,12 @@ public class SectorMask
 
     private void initTexture(GL gl)
     {
-        IntBuffer ibuf = BufferUtil.newIntBuffer(1);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(1);
         gl.glGenTextures(1, ibuf);
         texIdMask = ibuf.get(0);
     }
 
-    private void loadTexture(GL gl)
+    private void loadTexture(GL2 gl)
     {
         if (texIdMask == 0)
         {
@@ -73,7 +74,7 @@ public class SectorMask
         }
 
         //Build mask data
-        ByteBuffer data = BufferUtil.newByteBuffer(8 * 4);
+        ByteBuffer data = GLBuffers.newDirectByteBuffer(8 * 4);
         for (int i = 0; i < 8; ++i)
         {
             data.put((byte)0);
@@ -84,18 +85,18 @@ public class SectorMask
         data.rewind();
 
         //Upload
-        gl.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1);
+        gl.glPixelStorei(GL2.GL_UNPACK_ALIGNMENT, 1);
 
-        gl.glBindTexture(GL.GL_TEXTURE_3D, texIdMask);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_R, GL.GL_CLAMP);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST);
+        gl.glBindTexture(GL2.GL_TEXTURE_3D, texIdMask);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_WRAP_R, GL2.GL_CLAMP);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_WRAP_S, GL2.GL_CLAMP);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_WRAP_T, GL2.GL_CLAMP);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_MAG_FILTER, GL2.GL_NEAREST);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_MIN_FILTER, GL2.GL_NEAREST);
 
-        gl.glTexImage3D(GL.GL_TEXTURE_3D, 0, GL.GL_RGBA,
+        gl.glTexImage3D(GL2.GL_TEXTURE_3D, 0, GL2.GL_RGBA,
                 2, 2, 2,
-                0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE,
+                0, GL2.GL_RGBA, GL2.GL_UNSIGNED_BYTE,
                 data);
 
         dirty = false;
@@ -103,20 +104,20 @@ public class SectorMask
 
     public void bindTexture(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         if (dirty)
         {
             loadTexture(gl);
         }
 
-        gl.glBindTexture(GL.GL_TEXTURE_3D, texIdMask);
+        gl.glBindTexture(GL2.GL_TEXTURE_3D, texIdMask);
     }
 
     public void unbindTexture(GLAutoDrawable drawable)
     {
         GL gl = drawable.getGL();
-        gl.glBindTexture(GL.GL_TEXTURE_3D, 0);
+        gl.glBindTexture(GL2.GL_TEXTURE_3D, 0);
     }
 
     /**

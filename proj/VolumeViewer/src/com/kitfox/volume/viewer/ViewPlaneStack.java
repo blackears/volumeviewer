@@ -19,10 +19,11 @@
 
 package com.kitfox.volume.viewer;
 
-import com.sun.opengl.util.BufferUtil;
+import com.jogamp.opengl.util.GLBuffers;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.vecmath.Point3f;
 import javax.vecmath.Vector3f;
@@ -138,7 +139,7 @@ public class ViewPlaneStack
         //Allocate buffers
         if (planesPointId == 0)
         {
-            IntBuffer ibuf = BufferUtil.newIntBuffer(1);
+            IntBuffer ibuf = GLBuffers.newDirectIntBuffer(1);
 
             gl.glGenBuffers(1, ibuf);
             planesPointId = ibuf.get(0);
@@ -146,10 +147,10 @@ public class ViewPlaneStack
 
         //Upload buffer
         {
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, planesPointId);
+            gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, planesPointId);
 
             //Build fans
-            FloatBuffer arrayBuf = BufferUtil.newFloatBuffer(numVerts * 6);
+            FloatBuffer arrayBuf = GLBuffers.newDirectFloatBuffer(numVerts * 6);
             for (int i = 0; i < polySet.size(); ++i)
             {
                 Polygon poly = polySet.get(i);
@@ -158,8 +159,8 @@ public class ViewPlaneStack
             }
             arrayBuf.rewind();
 
-            gl.glBufferData(GL.GL_ARRAY_BUFFER, arrayBuf.limit() * BufferUtil.SIZEOF_FLOAT, arrayBuf, GL.GL_DYNAMIC_DRAW);
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
+            gl.glBufferData(GL2.GL_ARRAY_BUFFER, arrayBuf.limit() * GLBuffers.SIZEOF_FLOAT, arrayBuf, GL2.GL_DYNAMIC_DRAW);
+            gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, 0);
         }
 
 
@@ -173,7 +174,7 @@ public class ViewPlaneStack
             return;
         }
 
-        IntBuffer ibuf = BufferUtil.newIntBuffer(1);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(1);
         ibuf.put(0, planesPointId);
 
         GL gl = drawable.getGL();
@@ -202,18 +203,19 @@ public class ViewPlaneStack
 
     public void render(GLAutoDrawable drawable, int numIterations, SliceTracker callback)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         if (dirty)
         {
             buildPlanes(gl);
         }
 
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, planesPointId);
-        gl.glEnableClientState(GL.GL_VERTEX_ARRAY);
-        gl.glVertexPointer(3, GL.GL_FLOAT, BufferUtil.SIZEOF_FLOAT * 6, 0);
-        gl.glEnableClientState(GL.GL_TEXTURE_COORD_ARRAY);
-        gl.glTexCoordPointer(3, GL.GL_FLOAT, BufferUtil.SIZEOF_FLOAT * 6, BufferUtil.SIZEOF_FLOAT * 3);
+        gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, planesPointId);
+        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+        gl.glVertexPointer(3, GL2.GL_FLOAT, GLBuffers.SIZEOF_FLOAT * 6, 0);
+        gl.glEnableClientState(GL2.GL_TEXTURE_COORD_ARRAY);
+        gl.glTexCoordPointer(3, GL2.GL_FLOAT, GLBuffers.SIZEOF_FLOAT * 6, 
+                GLBuffers.SIZEOF_FLOAT * 3);
 
         //Slices are arranged from furthest from light to closest
         for (int i = 0; i < polyVertCounts.length; ++i)
@@ -225,20 +227,20 @@ public class ViewPlaneStack
             for (int j = 0; j < numIterations; ++j)
             {
                 callback.startSlice(drawable, j);
-                gl.glDrawArrays(GL.GL_TRIANGLE_FAN, offset, count);
+                gl.glDrawArrays(GL2.GL_TRIANGLE_FAN, offset, count);
                 callback.endSlice(drawable, j);
             }
         }
 
-        gl.glDisableClientState(GL.GL_VERTEX_ARRAY);
-        gl.glDisableClientState(GL.GL_TEXTURE_COORD_ARRAY);
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
+        gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
+        gl.glDisableClientState(GL2.GL_TEXTURE_COORD_ARRAY);
+        gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, 0);
     }
 
     private void renderWireframe(GLAutoDrawable drawable)
     {
         //For debugguing
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         if (dirty)
         {
@@ -255,7 +257,7 @@ public class ViewPlaneStack
                 Point3f p0 = poly.verts.get(j);
                 Point3f p1 = poly.verts.get(j == size - 1 ? 0 : j + 1);
 
-                gl.glBegin(GL.GL_LINES);
+                gl.glBegin(GL2.GL_LINES);
                 {
                     gl.glVertex3f(p0.x, p0.y, p0.z);
                     gl.glVertex3f(p1.x, p1.y, p1.z);

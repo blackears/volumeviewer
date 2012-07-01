@@ -19,7 +19,7 @@
 
 package com.kitfox.volume.viewer;
 
-import com.sun.opengl.util.BufferUtil;
+import com.jogamp.opengl.util.GLBuffers;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.nio.ByteBuffer;
@@ -42,7 +42,7 @@ public class VolumeTexture
         zSpan = img.length;
 
         int size = xSpan * ySpan * zSpan;
-        data = BufferUtil.newByteBuffer(size * 4);
+        data = GLBuffers.newDirectByteBuffer(size * 4);
         System.err.println("Mem needed " + (size * 4 * 4));
 
 //        values = new float[size];

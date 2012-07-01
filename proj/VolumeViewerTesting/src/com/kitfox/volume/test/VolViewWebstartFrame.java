@@ -23,9 +23,9 @@
 package com.kitfox.volume.test;
 
 import com.kitfox.volume.light.LightCtrlPanel;
+import com.kitfox.volume.mask.SectorPanel;
 import com.kitfox.volume.transfer.TransferFnPanel;
 import com.kitfox.volume.viewer.DataSamplerImage;
-import com.kitfox.volume.mask.SectorPanel;
 import com.kitfox.volume.viewer.GLActionSaveBuffer;
 import com.kitfox.volume.viewer.ViewerCube;
 import com.kitfox.volume.viewer.ViewerPanel;
@@ -618,7 +618,7 @@ public class VolViewWebstartFrame extends javax.swing.JFrame
     private void loadWindow(WindowLayoutType win, JDialog dlg)
     {
         dlg.setBounds(win.getX(), win.getY(), win.getWidth(), win.getHeight());
-        dlg.setVisible(win.isVisible());
+        dlg.setVisible(win.getVisible());
     }
 
     private VolumeViewerConfigType save()

@@ -19,10 +19,10 @@
 
 package com.kitfox.volume.viewer;
 
-import static com.kitfox.volume.JAXBHelper.*;
-
+import com.jogamp.opengl.util.GLBuffers;
+import static com.kitfox.volume.JAXBHelper.bytesToImage;
+import static com.kitfox.volume.JAXBHelper.imageToBytes;
 import com.kitfox.xml.schema.volumeviewer.cubestate.TransferType;
-import com.sun.opengl.util.BufferUtil;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
@@ -32,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.swing.event.ChangeEvent;
 
@@ -153,7 +154,7 @@ public class VolumeData
     private void buildData(DataSampler sampler)
     {
         int length = xSpan * ySpan * zSpan * 4;
-        data = BufferUtil.newByteBuffer(length);
+        data = GLBuffers.newDirectByteBuffer(length);
 
 //Random rand = new Random();
         for (int k = 0; k < zSpan; ++k)
@@ -203,32 +204,32 @@ public class VolumeData
 
     private void initTexture(GL gl)
     {
-        IntBuffer ibuf = BufferUtil.newIntBuffer(2);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(2);
         gl.glGenTextures(2, ibuf);
         textureId3d = ibuf.get(0);
         textureIdXfer = ibuf.get(1);
     }
 
-    private void loadTexture3d(GL gl)
+    private void loadTexture3d(GL2 gl)
     {
         if (textureId3d == 0)
         {
             initTexture(gl);
         }
 
-        gl.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1);
+        gl.glPixelStorei(GL2.GL_UNPACK_ALIGNMENT, 1);
 
-        gl.glBindTexture(GL.GL_TEXTURE_3D, textureId3d);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_R, GL.GL_CLAMP);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR_MIPMAP_LINEAR);
-        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_GENERATE_MIPMAP, GL.GL_TRUE);
+        gl.glBindTexture(GL2.GL_TEXTURE_3D, textureId3d);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_WRAP_R, GL2.GL_CLAMP);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_WRAP_S, GL2.GL_CLAMP);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_WRAP_T, GL2.GL_CLAMP);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_MAG_FILTER, GL2.GL_LINEAR);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_MIN_FILTER, GL2.GL_LINEAR_MIPMAP_LINEAR);
+        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_GENERATE_MIPMAP, GL2.GL_TRUE);
 
-        gl.glTexImage3D(GL.GL_TEXTURE_3D, 0, GL.GL_RGBA,
+        gl.glTexImage3D(GL2.GL_TEXTURE_3D, 0, GL2.GL_RGBA,
                 xSpan, ySpan, zSpan,
-                0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE,
+                0, GL2.GL_RGBA, GL2.GL_UNSIGNED_BYTE,
                 data);
 
         textureDirty3d = false;
@@ -236,14 +237,14 @@ public class VolumeData
 
     public void bindTexture3d(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         if (textureDirty3d)
         {
             loadTexture3d(gl);
         }
 
-        gl.glBindTexture(GL.GL_TEXTURE_3D, textureId3d);
+        gl.glBindTexture(GL2.GL_TEXTURE_3D, textureId3d);
     }
 
     private void loadTextureXfer(GL gl)
@@ -255,7 +256,7 @@ public class VolumeData
 
         int width = transferFunction.getWidth();
         int height = transferFunction.getHeight();
-        ByteBuffer buf = BufferUtil.newByteBuffer(width * height * 4);
+        ByteBuffer buf = GLBuffers.newDirectByteBuffer(width * height * 4);
         for (int j = 0; j < height; ++j)
         {
             for (int i = 0; i < width; ++i)
@@ -270,20 +271,20 @@ public class VolumeData
         }
         buf.rewind();
 
-        gl.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1);
+        gl.glPixelStorei(GL2.GL_UNPACK_ALIGNMENT, 1);
 
-        gl.glBindTexture(GL.GL_TEXTURE_2D, textureIdXfer);
-//        gl.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_WRAP_R, GL.GL_REPEAT);
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE);
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE);
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR_MIPMAP_LINEAR);
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_GENERATE_MIPMAP, GL.GL_TRUE);
+        gl.glBindTexture(GL2.GL_TEXTURE_2D, textureIdXfer);
+//        gl.glTexParameteri(GL2.GL_TEXTURE_3D, GL2.GL_TEXTURE_WRAP_R, GL2.GL_REPEAT);
+        gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_S, GL2.GL_CLAMP_TO_EDGE);
+        gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_T, GL2.GL_CLAMP_TO_EDGE);
+        gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_MAG_FILTER, GL2.GL_LINEAR);
+        gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_MIN_FILTER, GL2.GL_LINEAR_MIPMAP_LINEAR);
+        gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_GENERATE_MIPMAP, GL2.GL_TRUE);
 
 
-        gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA,
+        gl.glTexImage2D(GL2.GL_TEXTURE_2D, 0, GL2.GL_RGBA,
                 width, height,
-                0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE,
+                0, GL2.GL_RGBA, GL2.GL_UNSIGNED_BYTE,
                 buf);
 
         textureDirtyXfer = false;
@@ -298,7 +299,7 @@ public class VolumeData
             loadTextureXfer(gl);
         }
 
-        gl.glBindTexture(GL.GL_TEXTURE_2D, textureIdXfer);
+        gl.glBindTexture(GL2.GL_TEXTURE_2D, textureIdXfer);
     }
 
     public void dispose(GLAutoDrawable drawable)
@@ -310,7 +311,7 @@ public class VolumeData
 
         GL gl = drawable.getGL();
 
-        IntBuffer ibuf = BufferUtil.newIntBuffer(2);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(2);
         ibuf.put(0, textureId3d);
         ibuf.put(1, textureIdXfer);
         gl.glDeleteTextures(2, ibuf);

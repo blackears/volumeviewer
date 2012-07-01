@@ -19,8 +19,8 @@
 
 package com.kitfox.volume.viewer.shader;
 
+import com.jogamp.opengl.util.GLBuffers;
 import com.kitfox.volume.MatrixUtil;
-import com.sun.opengl.util.BufferUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +31,7 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.vecmath.Color3f;
 import javax.vecmath.Matrix4f;
@@ -104,15 +104,15 @@ public class VolumeShader
         return sb.toString();
     }
 
-    protected String getLog(GL gl, int handle)
+    protected String getLog(GL2 gl, int handle)
     {
         //Compilation failed
-        IntBuffer ibuf = BufferUtil.newIntBuffer(1);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(1);
         //ibuf.put();
-        gl.glGetObjectParameterivARB(handle, GL.GL_OBJECT_INFO_LOG_LENGTH_ARB, ibuf);
+        gl.glGetObjectParameterivARB(handle, GL2.GL_OBJECT_INFO_LOG_LENGTH_ARB, ibuf);
         int logLength = ibuf.get(0);
 
-        ByteBuffer bbuf = BufferUtil.newByteBuffer(logLength);
+        ByteBuffer bbuf = GLBuffers.newDirectByteBuffer(logLength);
         ibuf.rewind();
         gl.glGetInfoLogARB(handle, logLength, ibuf, bbuf);
 
@@ -121,10 +121,10 @@ public class VolumeShader
         return new String(msg);
     }
 
-    protected boolean isCompileValid(GL gl, int handle)
+    protected boolean isCompileValid(GL2 gl, int handle)
     {
-        IntBuffer ibuf = BufferUtil.newIntBuffer(1);
-        gl.glGetObjectParameterivARB(handle, GL.GL_OBJECT_COMPILE_STATUS_ARB, ibuf);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(1);
+        gl.glGetObjectParameterivARB(handle, GL2.GL_OBJECT_COMPILE_STATUS_ARB, ibuf);
         if (ibuf.get(0) == 0)
         {
             //Compilation failed
@@ -134,7 +134,7 @@ public class VolumeShader
         return true;
     }
 
-    private void loadShader(GL gl, URL url, int shaderType) throws IOException
+    private void loadShader(GL2 gl, URL url, int shaderType) throws IOException
     {
         String text = loadTextFile(url);
         int shaderId = gl.glCreateShader(shaderType);
@@ -152,10 +152,10 @@ public class VolumeShader
         gl.glDeleteObjectARB(shaderId);
     }
 
-    protected boolean isLinkValid(GL gl, int handle)
+    protected boolean isLinkValid(GL2 gl, int handle)
     {
-        IntBuffer ibuf = BufferUtil.newIntBuffer(1);
-        gl.glGetObjectParameterivARB(handle, GL.GL_OBJECT_LINK_STATUS_ARB, ibuf);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(1);
+        gl.glGetObjectParameterivARB(handle, GL2.GL_OBJECT_LINK_STATUS_ARB, ibuf);
         if (ibuf.get(0) == 0)
         {
             //Compilation failed
@@ -167,18 +167,18 @@ public class VolumeShader
 
     protected void init(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         try {
             programId = gl.glCreateProgram();
 
             loadShader(gl,
                     VolumeShader.class.getResource("volume.vert"),
-                    GL.GL_VERTEX_SHADER);
+                    GL2.GL_VERTEX_SHADER);
 
             loadShader(gl,
                     VolumeShader.class.getResource("volume.frag"),
-                    GL.GL_FRAGMENT_SHADER);
+                    GL2.GL_FRAGMENT_SHADER);
 
 
             gl.glLinkProgram(programId);
@@ -204,12 +204,12 @@ public class VolumeShader
 
     public void dispose(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
         gl.glDeleteObjectARB(programId);
         programId = 0;
     }
 
-    FloatBuffer mtxBuf = BufferUtil.newFloatBuffer(16);
+    FloatBuffer mtxBuf = GLBuffers.newDirectFloatBuffer(16);
     public void bind(GLAutoDrawable drawable, boolean frontToBack)
     {
         if (programId == 0)
@@ -217,17 +217,17 @@ public class VolumeShader
             init(drawable);
         }
 
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
-        gl.glEnable(GL.GL_BLEND);
+        gl.glEnable(GL2.GL_BLEND);
         gl.glDepthMask(false);
         if (frontToBack)
         {
-            gl.glBlendFunc(GL.GL_ONE_MINUS_DST_ALPHA, GL.GL_ONE);
+            gl.glBlendFunc(GL2.GL_ONE_MINUS_DST_ALPHA, GL2.GL_ONE);
         }
         else
         {
-            gl.glBlendFunc(GL.GL_ONE, GL.GL_ONE_MINUS_SRC_ALPHA);
+            gl.glBlendFunc(GL2.GL_ONE, GL2.GL_ONE_MINUS_SRC_ALPHA);
         }
 
 
@@ -256,12 +256,12 @@ public class VolumeShader
 
     public void unbind(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         gl.glUseProgram(0);
 
         gl.glDepthMask(true);
-        gl.glDisable(GL.GL_BLEND);
+        gl.glDisable(GL2.GL_BLEND);
     }
 
     /**

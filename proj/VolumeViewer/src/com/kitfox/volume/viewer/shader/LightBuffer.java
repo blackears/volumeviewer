@@ -19,8 +19,8 @@
 
 package com.kitfox.volume.viewer.shader;
 
+import com.jogamp.opengl.util.GLBuffers;
 import com.kitfox.volume.viewer.ViewerPanel;
-import com.sun.opengl.util.BufferUtil;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.vecmath.Color3f;
 
@@ -50,14 +51,14 @@ public class LightBuffer
     static final int width = 512;
     static final int height = 512;
 
-    private void checkFramebuffer(GL gl)
+    private void checkFramebuffer(GL2 gl)
     {
-        int status = gl.glCheckFramebufferStatusEXT(GL.GL_FRAMEBUFFER_EXT);
+        int status = gl.glCheckFramebufferStatus(GL2.GL_FRAMEBUFFER);
         switch (status)
         {
-            case GL.GL_FRAMEBUFFER_COMPLETE_EXT:
+            case GL2.GL_FRAMEBUFFER_COMPLETE:
                 break;
-            case GL.GL_FRAMEBUFFER_UNSUPPORTED_EXT:
+            case GL2.GL_FRAMEBUFFER_UNSUPPORTED:
                 throw new RuntimeException("Framebuffer unsupported");
             default:
                 throw new RuntimeException("Incomplete buffer " + status);
@@ -66,57 +67,57 @@ public class LightBuffer
 
     private void init(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
         
-        IntBuffer ibuf = BufferUtil.newIntBuffer(2);
+        IntBuffer ibuf = GLBuffers.newDirectIntBuffer(2);
 
-        gl.glGenFramebuffersEXT(2, ibuf);
+        gl.glGenFramebuffers(2, ibuf);
         frameBufAccumId = ibuf.get(0);
         frameBufTexId = ibuf.get(1);
 
         gl.glGenTextures(1, ibuf);
         texId = ibuf.get(0);
 
-        gl.glGenRenderbuffersEXT(1, ibuf);
+        gl.glGenRenderbuffers(1, ibuf);
         renderBufAccumId = ibuf.get(0);
 
         //Create shadow accumulation buffer
-        gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, frameBufAccumId);
-        gl.glBindRenderbufferEXT(GL.GL_RENDERBUFFER_EXT, renderBufAccumId);
-        gl.glRenderbufferStorageMultisampleEXT(GL.GL_RENDERBUFFER_EXT,
+        gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, frameBufAccumId);
+        gl.glBindRenderbuffer(GL2.GL_RENDERBUFFER, renderBufAccumId);
+        gl.glRenderbufferStorageMultisample(GL2.GL_RENDERBUFFER,
                 4,
-                GL.GL_RGBA,
+                GL2.GL_RGBA,
                 width, height);
-        gl.glFramebufferRenderbufferEXT(
-                GL.GL_FRAMEBUFFER_EXT,
-                GL.GL_COLOR_ATTACHMENT0_EXT,
-                GL.GL_RENDERBUFFER_EXT,
+        gl.glFramebufferRenderbuffer(
+                GL2.GL_FRAMEBUFFER,
+                GL2.GL_COLOR_ATTACHMENT0,
+                GL2.GL_RENDERBUFFER,
                 renderBufAccumId);
 
         checkFramebuffer(gl);
 
         //Create render to texture buffer
-        gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, frameBufTexId);
+        gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, frameBufTexId);
 
-        gl.glActiveTexture(GL.GL_TEXTURE0);
-        gl.glBindTexture(GL.GL_TEXTURE_RECTANGLE_EXT, texId);
-        gl.glTexImage2D(GL.GL_TEXTURE_RECTANGLE_EXT, 0, GL.GL_RGBA8,
+        gl.glActiveTexture(GL2.GL_TEXTURE0);
+        gl.glBindTexture(GL2.GL_TEXTURE_RECTANGLE, texId);
+        gl.glTexImage2D(GL2.GL_TEXTURE_RECTANGLE, 0, GL2.GL_RGBA8,
                 width, height,
-                0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE,
+                0, GL2.GL_RGBA, GL2.GL_UNSIGNED_BYTE,
                 null);
-//        gl.glGenerateMipmapEXT(GL.GL_TEXTURE_2D);
-        gl.glFramebufferTexture2DEXT(
-                GL.GL_FRAMEBUFFER_EXT,
-                GL.GL_COLOR_ATTACHMENT0_EXT,
-                GL.GL_TEXTURE_RECTANGLE_EXT, texId, 0);
+//        gl.glGenerateMipmapEXT(GL2.GL_TEXTURE_2D);
+        gl.glFramebufferTexture2D(
+                GL2.GL_FRAMEBUFFER,
+                GL2.GL_COLOR_ATTACHMENT0,
+                GL2.GL_TEXTURE_RECTANGLE, texId, 0);
 
         checkFramebuffer(gl);
 
 
 
-        gl.glBindTexture(GL.GL_TEXTURE_RECTANGLE_EXT, 0);
-        gl.glBindRenderbufferEXT(GL.GL_RENDERBUFFER_EXT, 0);
-        gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, 0);
+        gl.glBindTexture(GL2.GL_TEXTURE_RECTANGLE, 0);
+        gl.glBindRenderbuffer(GL2.GL_RENDERBUFFER, 0);
+        gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, 0);
 
     }
 
@@ -127,12 +128,12 @@ public class LightBuffer
             init(drawable);
         }
         
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
-//        gl.glActiveTexture(GL.GL_TEXTURE0);
-        gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, frameBufAccumId);
+//        gl.glActiveTexture(GL2.GL_TEXTURE0);
+        gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, frameBufAccumId);
 
-        gl.glPushAttrib(GL.GL_VIEWPORT_BIT);
+        gl.glPushAttrib(GL2.GL_VIEWPORT_BIT);
         gl.glViewport(0, 0, width, height);
 
         dirty = true;
@@ -140,10 +141,10 @@ public class LightBuffer
 
     public void unbind(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         gl.glPopAttrib();
-        gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, 0);
+        gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, 0);
     }
 
     public void clear(GLAutoDrawable drawable, Color3f lightColor)
@@ -153,7 +154,7 @@ public class LightBuffer
         GL gl = drawable.getGL();
 //        gl.glClearColor(lightColor.x, lightColor.y, lightColor.z, 1);
         gl.glClearColor(lightColor.x, lightColor.y, lightColor.z, 0);
-        gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+        gl.glClear(GL2.GL_COLOR_BUFFER_BIT);
 
         unbind(drawable);
     }
@@ -173,20 +174,20 @@ public class LightBuffer
             return;
         }
 
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
             dirty = false;
 
-//            gl.glEnable(GL.GL_BLEND);
-//            gl.glBlendFunc(GL.GL_ONE, GL.GL_ZERO);
-            gl.glBindFramebufferEXT(GL.GL_READ_FRAMEBUFFER_EXT, frameBufAccumId);
-            gl.glBindFramebufferEXT(GL.GL_DRAW_FRAMEBUFFER_EXT, frameBufTexId);
-            gl.glBlitFramebufferEXT(0, 0, width, height,
+//            gl.glEnable(GL2.GL_BLEND);
+//            gl.glBlendFunc(GL2.GL_ONE, GL2.GL_ZERO);
+            gl.glBindFramebuffer(GL2.GL_READ_FRAMEBUFFER, frameBufAccumId);
+            gl.glBindFramebuffer(GL2.GL_DRAW_FRAMEBUFFER, frameBufTexId);
+            gl.glBlitFramebuffer(0, 0, width, height,
                     0, 0, width, height,
-                    GL.GL_COLOR_BUFFER_BIT, GL.GL_NEAREST);
-//            gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, 0);
-            gl.glBindFramebufferEXT(GL.GL_READ_FRAMEBUFFER_EXT, 0);
-            gl.glBindFramebufferEXT(GL.GL_DRAW_FRAMEBUFFER_EXT, 0);
-//            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_2D);
+                    GL2.GL_COLOR_BUFFER_BIT, GL2.GL_NEAREST);
+//            gl.glBindFramebufferEXT(GL2.GL_FRAMEBUFFER_EXT, 0);
+            gl.glBindFramebuffer(GL2.GL_READ_FRAMEBUFFER, 0);
+            gl.glBindFramebuffer(GL2.GL_DRAW_FRAMEBUFFER, 0);
+//            gl.glGenerateMipmapEXT(GL2.GL_TEXTURE_2D);
     }
 
     public void bindLightTexture(GLAutoDrawable drawable)
@@ -196,35 +197,35 @@ public class LightBuffer
             init(drawable);
         }
 
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         flushToTexture(drawable);
 
-        gl.glBindTexture(GL.GL_TEXTURE_RECTANGLE_EXT, texId);
-//        gl.glTexParameterf(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE);
-//        gl.glTexParameterf(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE);
-//        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
-//        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR_MIPMAP_LINEAR);
+        gl.glBindTexture(GL2.GL_TEXTURE_RECTANGLE, texId);
+//        gl.glTexParameterf(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_S, GL2.GL_CLAMP_TO_EDGE);
+//        gl.glTexParameterf(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_T, GL2.GL_CLAMP_TO_EDGE);
+//        gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_MAG_FILTER, GL2.GL_LINEAR);
+//        gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_MIN_FILTER, GL2.GL_LINEAR_MIPMAP_LINEAR);
 
     }
 
     public void unbindLightTexture(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
-        gl.glBindTexture(GL.GL_TEXTURE_RECTANGLE_EXT, 0);
+        GL2 gl = drawable.getGL().getGL2();
+        gl.glBindTexture(GL2.GL_TEXTURE_RECTANGLE, 0);
     }
 
     public void dumpLightTexture(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
-        gl.glActiveTexture(GL.GL_TEXTURE0);
+        gl.glActiveTexture(GL2.GL_TEXTURE0);
         bindLightTexture(drawable);
 
         byte[] buf = new byte[width * height * 4];
-        ByteBuffer bb = BufferUtil.newByteBuffer(buf.length);
-        gl.glGetTexImage(GL.GL_TEXTURE_RECTANGLE_EXT, 0, GL.GL_RGBA,
-                GL.GL_UNSIGNED_BYTE, bb);
+        ByteBuffer bb = GLBuffers.newDirectByteBuffer(buf.length);
+        gl.glGetTexImage(GL2.GL_TEXTURE_RECTANGLE, 0, GL2.GL_RGBA,
+                GL2.GL_UNSIGNED_BYTE, bb);
         bb.rewind();
         bb.get(buf);
         byte h = buf[0];

@@ -19,8 +19,8 @@
 
 package com.kitfox.volume.viewer;
 
+import com.jogamp.opengl.util.GLBuffers;
 import static com.kitfox.volume.JAXBHelper.*;
-
 import com.kitfox.volume.MatrixUtil;
 import com.kitfox.volume.VolumeRenderable;
 import com.kitfox.volume.mask.SectorMask;
@@ -29,13 +29,12 @@ import com.kitfox.volume.viewer.shader.VolumeShader;
 import com.kitfox.volume.viewer.shader.VolumeShader.PassType;
 import com.kitfox.xml.schema.volumeviewer.cubestate.CubeType;
 import com.kitfox.xml.schema.volumeviewer.cubestate.LightingStyleType;
-import com.sun.opengl.util.BufferUtil;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
-import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.swing.event.ChangeEvent;
 import javax.vecmath.Color3f;
@@ -343,61 +342,61 @@ public class ViewerCube
         return lightMvpMtx;
     }
 
-    FloatBuffer mtxBuf = BufferUtil.newFloatBuffer(16);
-    private void setupViewerCamera(GL gl)
+    FloatBuffer mtxBuf = GLBuffers.newDirectFloatBuffer(16);
+    private void setupViewerCamera(GL2 gl)
     {
-        gl.glMatrixMode(GL.GL_PROJECTION);
+        gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
         MatrixUtil.setMatrixc(viewerProjMtx, mtxBuf);
         mtxBuf.rewind();
         gl.glLoadMatrixf(mtxBuf);
 
-        gl.glMatrixMode(GL.GL_MODELVIEW);
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
         MatrixUtil.setMatrixc(viewerMvMtx, mtxBuf);
         mtxBuf.rewind();
         gl.glLoadMatrixf(mtxBuf);
     }
 
-    private void setupLightCamera(GL gl)
+    private void setupLightCamera(GL2 gl)
     {
-        gl.glMatrixMode(GL.GL_PROJECTION);
+        gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
         MatrixUtil.setMatrixc(getLightProjMtx(), mtxBuf);
         mtxBuf.rewind();
         gl.glLoadMatrixf(mtxBuf);
 
-        gl.glMatrixMode(GL.GL_MODELVIEW);
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
         MatrixUtil.setMatrixc(getLightMvMtx(), mtxBuf);
         mtxBuf.rewind();
         gl.glLoadMatrixf(mtxBuf);
     }
 
-    private void setupHUDCamera(GL gl)
+    private void setupHUDCamera(GL2 gl)
     {
-        gl.glMatrixMode(GL.GL_PROJECTION);
+        gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
 
-        gl.glMatrixMode(GL.GL_MODELVIEW);
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
     }
 
     public void render(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
-        gl.glShadeModel(GL.GL_FLAT);
-//        gl.glEnable(GL.GL_DEPTH_TEST);
+        gl.glShadeModel(GL2.GL_FLAT);
+//        gl.glEnable(GL2.GL_DEPTH_TEST);
 
 
         setupViewerCamera(gl);
 
         if (multisampled && GLExtensions.inst().isMultisampleOk())
         {
-            gl.glEnable(GL.GL_MULTISAMPLE);
-//            gl.glEnable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
-//            gl.glEnable(GL.GL_SAMPLE_ALPHA_TO_ONE);
+            gl.glEnable(GL2.GL_MULTISAMPLE);
+//            gl.glEnable(GL2.GL_SAMPLE_ALPHA_TO_COVERAGE);
+//            gl.glEnable(GL2.GL_SAMPLE_ALPHA_TO_ONE);
         }
 
         //Draw bounds
@@ -421,28 +420,28 @@ public class ViewerCube
 
         if (multisampled && GLExtensions.inst().isMultisampleOk())
         {
-            gl.glDisable(GL.GL_MULTISAMPLE);
-//            gl.glDisable(GL.GL_SAMPLE_ALPHA_TO_COVERAGE);
-//            gl.glDisable(GL.GL_SAMPLE_ALPHA_TO_ONE);
+            gl.glDisable(GL2.GL_MULTISAMPLE);
+//            gl.glDisable(GL2.GL_SAMPLE_ALPHA_TO_COVERAGE);
+//            gl.glDisable(GL2.GL_SAMPLE_ALPHA_TO_ONE);
         }
     }
 
     private void drawAlphaOnly(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         if (data == null)
         {
             return;
         }
 
-        gl.glEnable(GL.GL_BLEND);
-        gl.glEnable(GL.GL_TEXTURE_3D);
-        gl.glTexEnvf(GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_REPLACE);
+        gl.glEnable(GL2.GL_BLEND);
+        gl.glEnable(GL2.GL_TEXTURE_3D);
+        gl.glTexEnvf(GL2.GL_TEXTURE_ENV, GL2.GL_TEXTURE_ENV_MODE, GL2.GL_REPLACE);
 
-        gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+        gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
 
-        gl.glActiveTexture(GL.GL_TEXTURE0);
+        gl.glActiveTexture(GL2.GL_TEXTURE0);
         data.bindTexture3d(drawable);
 
         gl.glColor3f(lightColor.x, lightColor.y, lightColor.z);
@@ -454,46 +453,46 @@ public class ViewerCube
         planes.setNormal(dir);
         planes.render(drawable, 1, ViewPlaneStack.NULL_SLICE_TRACKER);
 
-        gl.glDisable(GL.GL_TEXTURE_3D);
-        gl.glDisable(GL.GL_BLEND);
+        gl.glDisable(GL2.GL_TEXTURE_3D);
+        gl.glDisable(GL2.GL_BLEND);
     }
 
     private void drawShaded(GLAutoDrawable drawable)
     {
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         if (data == null)
         {
             return;
         }
 //            {
-//                gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_LINE);
+//                gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_LINE);
 //                planes.setBoxRadius(volumeRadius);
 //                planes.setNormal(getPlaneNormal());
 //                planes.render(drawable, 1, this);
-//                gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_FILL);
+//                gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_FILL);
 //            }
         if (GLExtensions.inst().isShadowLightOk())
         {
             lightBuffer.clear(drawable, lightColor);
         }
 
-        gl.glActiveTexture(GL.GL_TEXTURE0);
+        gl.glActiveTexture(GL2.GL_TEXTURE0);
         data.bindTexture3d(drawable);
         shader.setTexVolumeId(0);
 
-        gl.glActiveTexture(GL.GL_TEXTURE1);
+        gl.glActiveTexture(GL2.GL_TEXTURE1);
         data.bindTextureXfer(drawable);
         shader.setTexXferId(1);
 
         if (GLExtensions.inst().isShadowLightOk())
         {
-            gl.glActiveTexture(GL.GL_TEXTURE2);
+            gl.glActiveTexture(GL2.GL_TEXTURE2);
             lightBuffer.bindLightTexture(drawable);
             shader.setTexLightMapId(2);
         }
 
-        gl.glActiveTexture(GL.GL_TEXTURE3);
+        gl.glActiveTexture(GL2.GL_TEXTURE3);
         sectorMask.bindTexture(drawable);
         shader.setTexOctantMask(3);
 
@@ -510,7 +509,7 @@ public class ViewerCube
         planes.setNormal(getPlaneNormal());
         planes.render(drawable, lightingStyle.getNumPasses(), this);
 
-        gl.glActiveTexture(GL.GL_TEXTURE0);
+        gl.glActiveTexture(GL2.GL_TEXTURE0);
         
 
         //Display light buffer
@@ -521,17 +520,17 @@ public class ViewerCube
 
             setupHUDCamera(gl);
 
-            gl.glEnable(GL.GL_BLEND);
-//            gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
-            gl.glBlendFunc(GL.GL_ONE_MINUS_SRC_ALPHA, GL.GL_ZERO);
+            gl.glEnable(GL2.GL_BLEND);
+//            gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+            gl.glBlendFunc(GL2.GL_ONE_MINUS_SRC_ALPHA, GL2.GL_ZERO);
 
-            gl.glActiveTexture(GL.GL_TEXTURE0);
+            gl.glActiveTexture(GL2.GL_TEXTURE0);
             
-            gl.glEnable(GL.GL_TEXTURE_RECTANGLE_EXT);
-            gl.glTexEnvf(GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_REPLACE);
+            gl.glEnable(GL2.GL_TEXTURE_RECTANGLE);
+            gl.glTexEnvf(GL2.GL_TEXTURE_ENV, GL2.GL_TEXTURE_ENV_MODE, GL2.GL_REPLACE);
             lightBuffer.bindLightTexture(drawable);
 
-            gl.glBegin(GL.GL_QUADS);
+            gl.glBegin(GL2.GL_QUADS);
             {
                 final int w = LightBuffer.getLightTextureWidth();
                 final int h = LightBuffer.getLightTextureHeight();
@@ -547,8 +546,8 @@ public class ViewerCube
             gl.glEnd();
             
             lightBuffer.unbindLightTexture(drawable);
-            gl.glDisable(GL.GL_TEXTURE_RECTANGLE_EXT);
-            gl.glDisable(GL.GL_BLEND);
+            gl.glDisable(GL2.GL_TEXTURE_RECTANGLE);
+            gl.glDisable(GL2.GL_BLEND);
         }
 
     }
@@ -564,7 +563,7 @@ public class ViewerCube
         return style;
     }
 
-    FloatBuffer bufferMtx = BufferUtil.newFloatBuffer(16);
+    FloatBuffer bufferMtx = GLBuffers.newDirectFloatBuffer(16);
     public void startSlice(GLAutoDrawable drawable, int iteration)
     {
         switch (resolveLightingStyle())
@@ -578,7 +577,7 @@ public class ViewerCube
                 shader.bind(drawable, frontToBack);
                 break;
             case DIFFUSE:
-                GL gl = drawable.getGL();
+                GL2 gl = drawable.getGL().getGL2();
                 switch (iteration)
                 {
                     case 0:
@@ -586,7 +585,7 @@ public class ViewerCube
                         lightBuffer.flushToTexture(drawable);
                         shader.setPassType(PassType.LIGHTMAP);
                         shader.bind(drawable, frontToBack);
-//                        gl.glEnable(GL.GL_MULTISAMPLE);
+//                        gl.glEnable(GL2.GL_MULTISAMPLE);
                         break;
                     case 1:
                         setupLightCamera(gl);
@@ -613,7 +612,7 @@ public class ViewerCube
                 {
                     case 0:
                         shader.unbind(drawable);
-//                        gl.glDisable(GL.GL_MULTISAMPLE);
+//                        gl.glDisable(GL2.GL_MULTISAMPLE);
                         break;
                     case 1:
                         lightBuffer.unbind(drawable);

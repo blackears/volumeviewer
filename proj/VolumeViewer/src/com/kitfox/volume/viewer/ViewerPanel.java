@@ -22,9 +22,9 @@
 
 package com.kitfox.volume.viewer;
 
+import com.jogamp.opengl.util.GLBuffers;
 import com.kitfox.volume.MatrixUtil;
 import com.kitfox.xml.schema.volumeviewer.cubestate.NavigatorType;
-import com.sun.opengl.util.BufferUtil;
 import java.awt.Color;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -34,12 +34,13 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import javax.media.opengl.DebugGL;
 import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
-import javax.media.opengl.GLCanvas;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLEventListener;
+import javax.media.opengl.GLProfile;
+import javax.media.opengl.awt.GLCanvas;
 import javax.swing.JOptionPane;
 import javax.swing.event.ChangeEvent;
 import javax.vecmath.Matrix4f;
@@ -101,7 +102,8 @@ public class ViewerPanel extends GLCanvas
 
     private static GLCapabilities getCapabilities()
     {
-        GLCapabilities cap = new GLCapabilities();
+        GLProfile glprofile = GLProfile.getDefault();
+        GLCapabilities cap = new GLCapabilities(glprofile);
 
         cap.setAlphaBits(8);
         cap.setHardwareAccelerated(true);
@@ -114,12 +116,12 @@ public class ViewerPanel extends GLCanvas
     public void init(GLAutoDrawable drawable)
     {
         //Debug
-        drawable.setGL(new DebugGL(drawable.getGL()));
+        drawable.setGL(drawable.getGL());
 
         GLExtensions.update(drawable);
         checkExtensions();
 
-        GL gl = drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
         System.err.println("Initializing GL Thread");
         System.err.println(gl.glGetString(GL.GL_EXTENSIONS));
         System.err.println("Gl version" + gl.glGetString(GL.GL_VERSION));
@@ -127,7 +129,7 @@ public class ViewerPanel extends GLCanvas
         // Enable VSync
         gl.setSwapInterval(1);
 
-        gl.glShadeModel(GL.GL_FLAT);
+        gl.glShadeModel(GL2.GL_FLAT);
 
     }
 
@@ -205,13 +207,18 @@ public class ViewerPanel extends GLCanvas
     {
     }
 
+    @Override
+    public void dispose(GLAutoDrawable glad)
+    {
+    }
+
     public BufferedImage dumpBuffer(GLAutoDrawable drawable)
     {
         GL gl = drawable.getGL();
 
         int width = getWidth();
         int height = getHeight();
-        ByteBuffer bb = BufferUtil.newByteBuffer(width * height * 4);
+        ByteBuffer bb = GLBuffers.newDirectByteBuffer(width * height * 4);
         gl.glReadPixels(0, 0, width, height, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, bb);
 
         BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
