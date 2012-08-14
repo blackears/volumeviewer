@@ -105,6 +105,13 @@
         <copy file="${dist.jar}" todir="${www.dir}"/>
 
         <copy file="../VolumeViewer/dist/VolumeViewer.jar" todir="${www.dir}"/>
+        <copy file="../../lib/vecmath.jar" todir="${www.dir}"/>
+        <copy file="../../lib/jai-imageio/lib/ext/jai_imageio.jar" todir="${www.dir}"/>
+        <copy todir="${www.dir}/jogl">
+            <fileset dir="../../lib/jogl">
+                
+            </fileset>
+        </copy>
 
 
         <signjar alias="${key.user}" storepass="${key.password}" keystore="${key.location}">

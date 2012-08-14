@@ -24,16 +24,20 @@
         <j2se version="1.6+" initial-heap-size="500M" max-heap-size="1000M"/>
         <extension href="http://download.java.net/media/jogl/builds/archive/jsr-231-webstart-current/jogl.jnlp" name="jogl"/>
         <extension href="http://download.java.net/media/jogl/builds/archive/jsr-231-1.1.1/webstart/jogl.jnlp" name="jogl"/>
-        -->
-        <extension name="jogl-all-awt" 
-            href="http://jogamp.org/deployment/jogamp-current/jogl-all-awt.jnlp"/>
         <extension href="http://download.java.net/media/java3d/webstart/release/java3d-latest.jnlp"/>
         <extension href="http://download.java.net/media/jai-imageio/webstart/release/jai-imageio-1.1.jnlp"/>
+        <extension name="jogl-all-awt" 
+            href="http://jogamp.org/deployment/jogamp-current/jogl-all-awt.jnlp"/>
+        -->
 
         <!--property name="sun.java2d.opengl" value="true"/-->
         <jar href="VolumeViewerTesting.jar" main="true"/>
 
         <jar href="VolumeViewer.jar"/>
+        
+        <extension name="jogl" href="jogl/jogl.jnlp"/>
+        <jar href="vecmath.jar" main="true"/>
+        <jar href="jai_imageio.jar" main="true"/>
     </resources>
 
     <application-desc 
