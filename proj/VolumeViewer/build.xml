@@ -85,6 +85,9 @@
     <target name="bind-preferences" depends="init">
         <taskdef name="xjc" classname="com.sun.tools.xjc.XJCTask">
             <classpath>
+                <fileset dir="../../lib/jaxb-ri-2.2.6/lib">
+                    <include name="**/*.jar"/>
+                </fileset>
                 <pathelement path="${javac.classpath}"/>
             </classpath>
         </taskdef>
